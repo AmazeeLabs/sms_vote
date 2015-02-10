@@ -1,0 +1,429 @@
+<?php
+
+/**
+ * @file
+ * Implements an SMS based voting system.
+ *
+ */
+
+/**
+ * Implements hook_init().
+ */
+function sms_vote_init() {
+  // Make sure that we have this js on the page.
+  drupal_add_js(drupal_get_path('module', 'sms_vote') . '/js/sms_vote.js');
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function sms_vote_entity_info() {
+  $entities['sms_vote'] = array(
+    'label' => t('SMS Vote'),
+    'controller class' => 'SMSVoteEntityController',
+    'base table' => 'sms_vote',
+    'access callback' => 'sms_vote_vote_access',
+    'entity keys' => array(
+      'id' => 'svid',
+    ),
+  );
+  $entities['sms_vote_points'] = array(
+    'label' => t('SMS Vote Points'),
+    'controller class' => 'SMSVotePointsEntityController',
+    'base table' => 'sms_vote_points',
+    'access callback' => 'sms_vote_vote_points_access',
+    'entity keys' => array(
+      'id' => 'svpid',
+    ),
+  );
+  return $entities;
+}
+
+/**
+ * Access callback for vote entities.
+ */
+function sms_vote_vote_access($op, $entity = NULL, $account = NULL, $entity_type) {
+  // The votes do not have any view or update operations. Also, the deletion
+  // can be done only of the user has a special permission.
+  if ($op == 'create') {
+    return TRUE;
+  }
+  elseif ($op == 'delete' && user_access('delete votes', $account)) {
+    return TRUE;
+  }
+  // In any other case, default to false.
+  return FALSE;
+}
+
+/**
+ * Access callback for vote points entities.
+ */
+function sms_vote_vote_points_access($op, $entity = NULL, $account = NULL, $entity_type) {
+  // At the moment, it is the same implementation as for votes.
+  return sms_vote_vote_access($op, $entity, $account, $entity_type);
+}
+
+/**
+ * Implements hook_permission().
+ */
+function sms_vote_permission() {
+  return array(
+    'administer sms vote' => array(
+      'title' => t('Administer SMS Vote'),
+      'restrict access' => TRUE,
+    ),
+
+    // This is used for the moment only in the vote
+    'delete votes' => array(
+      'title' => t('Delete votes'),
+      'restrict access' => TRUE,
+      'warning' => t('IMPORTANT: Give to trusted roles only; this permission has security implications. The only use case when votes should be deleted is when the maximum number of fails has been reached for a valid phone number.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sms_vote_theme() {
+  return array(
+    'sms_vote_checkout_review' => array(
+      'variables' => array('votes' => array()),
+      'template' => 'templates/sms_vote_checkout_review',
+     ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sms_vote_menu() {
+  $items['sms_vote/checkout'] = array(
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+    'page callback' => 'sms_vote_checkout_page',
+    'title' => 'Votes checkout',
+    'file' => 'sms_vote.pages.inc'
+  );
+  $items['sms_vote/%node/%ctools_js'] = array(
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+    'page callback' => 'sms_vote_vote_page',
+    'page arguments' => array(1, 2),
+    'title' => 'Vote',
+    'file' => 'sms_vote.pages.inc',
+  );
+  $items['sms_vote/cancel/%node/%ctools_js'] = array(
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+    'page callback' => 'sms_vote_vote_cancel_page',
+    'page arguments' => array(2, 3),
+    'title' => 'Cancel Vote',
+    'file' => 'sms_vote.pages.inc',
+  );
+  $items['admin/config/system/sms_vote'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => 'SMS Vote',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sms_vote_admin'),
+    'file' => 'sms_vote.admin.inc'
+  );
+  $items['admin/config/system/sms_vote/settings'] = array(
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'title' => 'SMS Vote Settings',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sms_vote_admin'),
+    'file' => 'sms_vote.admin.inc'
+  );
+  $items['admin/config/system/sms_vote/codes'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'Predefined Codes',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'sms_vote_admin_predefined_codes',
+    'file' => 'sms_vote.admin.inc'
+  );
+  $items['sms_vote/code/status/%/%sms_vote_predefined_code'] = array(
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'sms_vote_code_status_change',
+    'page arguments' => array(3,4,5),
+    'file' => 'sms_vote.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_views_bulk_operations_form_alter().
+ *
+ * Attention: this is NOT a form alter, it is a hook provided by the vbo module.
+ */
+function sms_vote_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
+  // Remove the delete action if the user does not have access to it.
+  if ($vbo->view->name == 'votes') {
+    if (!empty($form['select']['operation']['#options']['action::views_bulk_operations_delete_item']) && !user_access('delete votes')) {
+      unset($form['select']['operation']['#options']['action::views_bulk_operations_delete_item']);
+    }
+  }
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function sms_vote_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && !empty($plugin)) {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function sms_vote_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'sms_vote') . '/includes/views',
+  );
+}
+
+/**
+ * Implements hook_sms_vote_points_insert().
+ */
+function sms_vote_sms_vote_points_insert($vote_points_entity) {
+  // We register a shutdown function to when calculating the votes to be sure
+  // that we also take into consideration the current changes. Otherwise, the
+  // total points number will not be calculated using the current points.
+  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
+}
+
+/**
+ * Implements hook_sms_vote_points_update().
+ */
+function sms_vote_sms_vote_points_update($vote_points_entity) {
+  // For the moment, just call the insert hook.
+  sms_vote_sms_vote_points_insert($vote_points_entity);
+}
+
+/**
+ * Implements hook_sms_vote_points_delete().
+ */
+function sms_vote_sms_vote_points_delete($vote_points_entity) {
+  $callbacks = drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
+}
+
+/**
+ * Implements hook_sms_vote_delete().
+ */
+function sms_vote_sms_vote_delete($vote_entity) {
+  // Delete all the vote points entities attached to it.
+  $query = db_select('sms_vote_points', 'svp')->fields('svp', array('svpid'))->condition('svp.svid', $vote_entity->svid);
+  $ids = $query->execute()->fetchAllKeyed(0, 0);
+  if (!empty($ids)) {
+    entity_delete_multiple('sms_vote_points', $ids);
+  }
+}
+
+/**
+ * Preprocess function for the sms_vote_checkout_review theme().
+ */
+function sms_vote_preprocess_sms_vote_checkout_review(&$vars) {
+  $storage = SMSVoteTmpStorageFactory::getStorage();
+  $vars['votes'] = $storage->getAllPoints();
+  foreach ($vars['votes'] as $nid => $points) {
+    $vars['votes'][$nid] = array('points' => $points, 'node' => node_load($nid));
+  }
+}
+
+/**
+ * Returns a random generated code.
+ */
+function sms_vote_generate_code() {
+  $digits = variable_get('sms_vote_code_digits', 4);
+  // If the digits is for example 4, we generate a number between 1000
+  // (which is 10^(4-1)) and 9999 (which is 10^4 - 1)
+  $min = pow(10, $digits - 1);
+  $max = pow(10, $digits) - 1;
+  return rand($min, $max);
+}
+
+/**
+ * Generates an amount of codes to be stored as predefined codes.
+ *
+ * @param int $amount
+ *  The amount of codes to be generated.
+ */
+function sms_vote_generate_codes($amount) {
+  $codes = array();
+  $index = 0;
+  $saved_codes = sms_vote_get_predefined_codes();
+  foreach ($saved_codes as $saved_code) {
+    $predefined_codes[] = $saved_code->code;
+  }
+  while ($index < $amount) {
+    $code = sms_vote_generate_code();
+    // Make sure the code is unique.
+    if (!in_array($code, $codes) && !in_array($code, $predefined_codes)) {
+      $index++;
+      $codes[] = $code;
+    }
+  }
+  return $codes;
+}
+
+/**
+ * Stores an array of codes into the predefined codes table.
+ *
+ * @param array $codes
+ *  An array with codes to be saved.
+ */
+function sms_vote_store_codes($codes) {
+  $query = db_insert('sms_vote_predefined_codes')->fields(array('code', 'reserved'));
+  foreach ($codes as $code) {
+    $query->values(array($code, 0));
+  }
+  $query->execute();
+}
+
+/**
+ * Returns a predefined code.
+ */
+function sms_vote_get_predefined_codes() {
+  return db_select('sms_vote_predefined_codes', 'svpc')->fields('svpc')->execute()->fetchAll();
+}
+
+/**
+ * Loads a predefined code by its id.
+ *
+ * @param int $cid
+ *  The id of the code.
+ */
+function sms_vote_predefined_code_load($cid) {
+  $query = db_select('sms_vote_predefined_codes', 'svpc')->fields('svpc')->condition('svpc.cid', $cid);
+  return $query->execute()->fetch();
+}
+
+/**
+ * Returns the total points for a node id.
+ *
+ * @param int $nid
+ *  The node id.
+ */
+function sms_vote_get_total_points_for_nid($nid) {
+  $query = db_select('sms_vote_points', 'svp');
+  $query->addExpression('SUM(svp.points)', 'total_points');
+  $query->innerJoin('sms_vote', 'sv', 'sv.svid = svp.svid');
+  $query->condition('svp.nid', $nid)->condition('sv.status', 1);
+  $result = $query->execute()->fetch();
+  if (!empty($result->total_points)) {
+    return $result->total_points;
+  }
+  return 0;
+}
+
+/**
+ * Updates the total points for a node id.
+ *
+ * This is used for example as a shutdown function to refresh the number of
+ * points of a node.
+ *
+ * @param int $nid
+ *  The node id.
+ */
+function sms_vote_update_total_points($nid) {
+  $points = sms_vote_get_total_points_for_nid($nid);
+  // Delete and insert the new value for the vote points.
+  db_delete('sms_vote_total_points')->condition('nid', $nid)->execute();
+  db_insert('sms_vote_total_points')->fields(array('nid' => $nid, 'points' => $points))->execute();
+  // @todo: If we will attach the points on the entity load, then we need to
+  // clear the entity cache here.
+}
+
+/**
+ * Returns an array with valid codes for a vote entity.
+ *
+ * If the vote entity has the special number phone assigned, then any predefined
+ * code is valid. Otherwise, only the code defined in the entity is valid.
+ *
+ * @param object $vote_entity
+ *  A Vote Entity object.
+ */
+function sms_vote_get_valid_codes_for_vote($vote_entity) {
+  $valid_codes = array();
+  $codes = sms_vote_get_predefined_codes();
+  foreach ($codes as $code) {
+    // @todo: We could enhance this so that only the codes which are reserved
+    // are valid.
+    $valid_codes[] = $code->code;
+  }
+
+  // If the phone is not the special one, then a valid code is also the code
+  // that was generated specially for it.
+  if (!sms_vote_is_special_number_phone($vote_entity->phone)) {
+    $valid_codes[] = $vote_entity->code;
+  }
+  return $valid_codes;
+}
+
+/**
+ * Deletes a code from the predefined codes table.
+ *
+ * @param string $code
+ *  The code to delete.
+ */
+function sms_vote_delete_code($code) {
+  db_delete('sms_vote_predefined_codes')->condition('code', $code)->execute();
+}
+
+/**
+ * Checks if a phone matches the special phone number for the predefined codes.
+ *
+ * @param string $phone
+ *  A phone number to match.
+ */
+function sms_vote_is_special_number_phone($phone) {
+  $special_number = variable_get('sms_vote_special_number', '');
+  if (!empty($special_number) && $phone == $special_number) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Checks if a phone is valid and if yes it returns the phone in the
+ * internation form.
+ *
+ * @param string $phone
+ */
+function sms_vote_normalize_phone($phone) {
+  // If this is the special phone, we do not validate it.
+   if (sms_vote_is_special_number_phone($phone))  {
+    return $phone;
+  }
+  // If the phone contains only digits, we must ensure that it has exactly 10
+  // and it starts with 0. This is the case for 07xxxxxxxx
+  if (ctype_digit($phone) && strlen($phone) == 10 && substr($phone, 0, 1) == '0') {
+    // In this case we also replace the '0' in the beginning with +41.
+    $phone = substr_replace($phone, '+41', 0, 1);
+    return $phone;
+  }
+  // The other possibility would be that the phone starts with '+' and has at
+  // least 10 digits, so it uses the international format.
+  if (substr($phone, 0, 1) == '+' && strlen($phone) > 10 && ctype_digit(substr($phone, 1))) {
+    // In this case, the phone is valid, and we want to store it like that so no
+    // need to change.
+    return $phone;
+  }
+  // If we are here, the phone is not valid, so just return FALSE.
+  return FALSE;
+}
+
+/**
+ * Returns the formatted message for the SMS that contains the code.
+ *
+ * @param string $code
+ *  The code to be sent.
+ */
+function sms_vote_format_sms_message($code) {
+  return t('Your SMS-code for voting on !site_name: !code', array('!site_name' => variable_get('site_name'), '!code' => $code));
+}

@@ -1,0 +1,174 @@
+<?php
+
+/**
+ * @file
+ *  Install file for the sms_vote module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function sms_vote_schema() {
+  $schema['sms_vote'] = array(
+    'description' => 'The base table for vote entities.',
+    'fields' => array(
+      'svid' => array(
+        'description' => 'The primary identifier for a vote.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'phone' => array(
+        'description' => 'The phone to which the sms will be sent.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'code' => array(
+        'description' => 'The code to validate the vote.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'status' => array(
+        'description' => 'The status of the vote. 0 - pending, 1 - confirmed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the vote was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'confirmed' => array(
+        'description' => 'The Unix timestamp when the vote was confirmed.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'validation_fails' => array(
+        'description' => 'How many times the validation of the code failed.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('svid'),
+    'indexes' => array(
+      'phone' => array('phone'),
+    ),
+  );
+  $schema['sms_vote_points'] = array(
+    'description' => 'The base table for vote points entities.',
+    'fields' => array(
+      'svpid' => array(
+        'description' => 'The primary identifier for the entity.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'svid' => array(
+        'description' => 'The vote to which the entity belongs.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'nid' => array(
+        'description' => 'The node id to which the entity is storing the points.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'points' => array(
+        'description' => 'The number of points stored.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('svpid'),
+    'foreign keys' => array(
+      'sms_vote' => array(
+        'table' => 'sms_vote',
+        'columns' => array('svid' => 'svid'),
+      ),
+      'sms_vote_node' => array(
+        'table' => 'node',
+        'columns' => array('nid' => 'nid'),
+      ),
+    ),
+  );
+  $schema['sms_vote_session'] = array(
+    'description' => 'The table for storing session data, like the vote cart.',
+    'fields' => array(
+      'session_api_id' => array(
+        'description' => 'The id of the session api.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'data' => array(
+        'description' => 'The data from the cart',
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('session_api_id'),
+  );
+  $schema['sms_vote_total_points'] = array(
+    'description' => 'Aggregates the total points for nodes.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The node id to which the entity is storing the points.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'points' => array(
+        'description' => 'The number of points stored.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+    'foreign keys' => array(
+      'sms_vote_node' => array(
+        'table' => 'node',
+        'columns' => array('nid' => 'nid'),
+      ),
+    ),
+  );
+  $schema['sms_vote_predefined_codes'] = array(
+    'description' => 'Stores predefined codes to be give to people who do not have a phone.',
+    'fields' => array(
+      'cid' => array(
+        'description' => 'The code id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'code' => array(
+        'description' => 'The code to validate the vote.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'reserved' => array(
+        'description' => 'If the codes is reserved already or not',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('cid'),
+  );
+  return $schema;
+}

@@ -1,0 +1,7 @@
+name = SMS Vote WebSMS
+description = Uses the websms service to send messages.
+core = 7.x
+dependencies[] = sms_vote
+
+files[] = includes/classes/SMSWebSMSSender.inc
+files[] = lib/WebSmsCom_Toolkit.inc

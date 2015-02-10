@@ -1,0 +1,20 @@
+name = SMS Vote
+description = Implements an SMS based voting system.
+core = 7.x
+
+dependencies[] = entity
+dependencies[] = ctools
+dependencies[] = session_api
+
+files[] = includes/controllers/SMSVoteDefaultController.inc
+files[] = includes/controllers/SMSVotePointsEntityController.inc
+files[] = includes/controllers/SMSVoteEntityController.inc
+files[] = includes/interfaces/SMSVoteTmpStorageInterface.inc
+files[] = includes/interfaces/SMSSenderInterface.inc
+files[] = includes/classes/SMSVoteTmpStorage.inc
+files[] = includes/classes/SMSVoteTmpSessionStorage.inc
+files[] = includes/classes/SMSVoteTmpSessionAPIStorage.inc
+files[] = includes/classes/SMSVoteTmpCtoolsCacheStorage.inc
+files[] = includes/classes/SMSVoteTmpStorageFactory.inc
+files[] = includes/classes/SMSVoteSenderFactory.inc
+files[] = includes/classes/SMSDefaultSender.inc

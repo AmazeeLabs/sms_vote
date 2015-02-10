@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * @file
+ *  Uses the websms service to send messages.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function sms_vote_websms_menu() {
+  $items['admin/config/system/sms_vote/websms'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'Web SMS',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sms_vote_websms_admin'),
+    'file' => 'sms_vote_websms.admin.inc'
+  );
+  return $items;
+}
