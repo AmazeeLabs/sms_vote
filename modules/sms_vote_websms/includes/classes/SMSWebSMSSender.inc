@@ -30,6 +30,9 @@ class SMSWebSMSSender extends SMSDefaultSender {
    * @see SMSSenderInterface::send()
    */
 	public function send($phone, $text) {
+	  drupal_set_message('Phone: ' . $phone . '; Text: ' . $text);
+	  return;
+
     // If the first character of the phone is '+', remove it. The service does
     // not accept this format.
     if (substr($phone, 0, 1) == '+') {

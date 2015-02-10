@@ -20,16 +20,20 @@ $plugin = array(
  */
 function sms_vote_cart_render($subtype, $conf, $args, $context) {
   $block = new stdClass;
-  module_load_include('inc', 'sms_vote', 'sms_vote.pages');
-  $storage = SMSVoteTmpStorageFactory::getStorage();
-  $all_points = $storage->getAllPoints();
-  // We need this div to appear all the time.
-  $block->content['#markup'] = '<div class="sms-cart-form-wrapper">';
-  if (!empty($all_points)) {
-    $form = drupal_get_form('sms_vote_voting_cart');
-    $block->content['#markup'] .= render($form);
+  // We show the cart only if the setting is enabled.
+  $sms_vote_settings = sms_vote_get_settings();
+  if (!empty($sms_vote_settings['enable_cart'])) {
+    module_load_include('inc', 'sms_vote', 'sms_vote.pages');
+    $storage = SMSVoteTmpStorageFactory::getStorage();
+    $all_points = $storage->getAllPoints();
+    // We need this div to appear all the time.
+    $block->content['#markup'] = '<div class="sms-cart-form-wrapper">';
+    if (!empty($all_points)) {
+      $form = drupal_get_form('sms_vote_voting_cart');
+      $block->content['#markup'] .= render($form);
+    }
+    $block->content['#markup'] .= '</div>';
   }
-  $block->content['#markup'] .= '</div>';
   return $block;
 }
 

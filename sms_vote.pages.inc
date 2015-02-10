@@ -8,30 +8,113 @@
 /**
  * Page callback for the sms vote page.
  */
-function sms_vote_vote_page($node, $js = NULL) {
+function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
   if (!$js) {
+    // @todo: We have to handle this nicer.
     return drupal_get_form('sms_vote_vote_form', array($node));
   }
   ctools_include('modal');
   ctools_include('ajax');
+  $form_info = array(
+    'id' => 'sms_vote',
+    'path' => "sms_vote/" . $node->nid . "/" . ($js ? 'ajax' : 'nojs') . "/%step",
+    'show cancel' => TRUE,
+    'next callback' =>  'sms_vote_next_process',
+    'finish callback' => 'sms_vote_finish_process',
+    'cancel callback' => 'sms_vote_cancel_process',
+    'order' => array(
+      'vote' => t('Vote'),
+      'enter_phone' => t('Enter phone number'),
+      'confirm_code' => t('Confirm Code'),
+    ),
+    'forms' => array(
+      'vote' => array(
+        'form id' => 'sms_vote_vote_form',
+      ),
+      'enter_phone' => array(
+        'form id' => 'sms_vote_phone_form',
+      ),
+      'confirm_code' => array(
+        'form id' => 'sms_vote_confirm_code_form',
+      ),
+    ),
+  );
+  if (empty($step)) {
+    $step = 'vote';
+  }
   $form_state = array(
-    'title' => t('Vote'),
-    'ajax' => TRUE,
+    'ajax' => $js,
     'build_info' => array(
       'args' => array(0 => array($node)),
     )
   );
-  $output = ctools_modal_form_wrapper('sms_vote_vote_form', $form_state);
-  if (!empty($form_state['executed'])) {
-    // After we voted, we just dismiss the modal and update the cart.
-    $output = array();
-    $output[] = ctools_modal_command_dismiss();
+  ctools_include('wizard');
+  $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
 
-    $form = drupal_get_form('sms_vote_voting_cart');
-    $output[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($form));
+  $commands = array();
+  if (!empty($form_state['dismiss_and_update_cart'])) {
+    $commands[] = ctools_modal_command_dismiss();
+    $cart_form = drupal_get_form('sms_vote_voting_cart');
+    $commands[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($cart_form));
   }
-  print ajax_render($output);
-  exit;
+  elseif (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+    $commands[] = ctools_modal_command_dismiss();
+  }
+  else {
+    $output = drupal_render($form);
+    $commands = ctools_modal_form_render($form_state, $output);
+  }
+  print ajax_render($commands);
+}
+
+function sms_vote_phone_form($form, &$form_state) {
+  $form['phone'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Phone test',
+  );
+  return $form;
+}
+
+function sms_vote_phone_form_submit($form, &$form_state) {
+
+}
+
+function sms_vote_confirm_code_form($form, &$form_state) {
+  $form['confirm_code'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Confirm test',
+  );
+  return $form;
+}
+
+function sms_vote_confirm_code_form_submit($form, &$form_state) {
+
+}
+
+function sms_vote_next_process(&$form_state) {
+  // When clicking on the 'Continue' on a vote form, and we have the cart
+  // enabled then we want to dismiss the modal window and update the cart.
+  $sms_vote_settings = sms_vote_get_settings();
+  if (!empty($sms_vote_settings['enable_cart'])) {
+    $form_state['dismiss_and_update_cart'] = TRUE;
+  }
+}
+
+/**
+ * Flags the voting (checkout) process as finished.
+ * It is a 'finish callback' in a ctools wizard form.
+ */
+function sms_vote_finish_process(&$form_state) {
+  $form_state['complete'] = TRUE;
+}
+
+/**
+ * Flags the voting (checkout) process as canceled.
+ * It is a 'cancel callback' in a ctools wizard form.
+ */
+function sms_vote_cancel_process(&$form_state) {
+  // @todo: delete the votes for the node.
+  $form_state['cancel'] = TRUE;
 }
 
 /**
@@ -67,25 +150,24 @@ function sms_vote_vote_cancel_page($node, $js = NULL) {
  */
 function sms_vote_vote_form($form, &$form_state, $nodes) {
   $storage = SMSVoteTmpStorageFactory::getStorage();
-  $form = sms_vote_widget($nodes);
+  $vote_widget = sms_vote_widget($nodes);
+  $form += $vote_widget;
   // Make sure this file is included in ajax requests.
   form_load_include($form_state, 'inc', 'sms_vote', 'sms_vote.pages');
-  // If we have anything in the form, we show the submit button, otherwise we
-  // just show a message that the user cannot vote anymore.
-  $submit_title = t('Vote');
-  foreach ($nodes as $node) {
-    if ($storage->getPoints($node->nid)) {
-      $submit_title = t('Update vote');
-      break;
+  if (!empty($vote_widget)) {
+    // If we have anything in the form, we show the submit button, otherwise we
+    // just show a message that the user cannot vote anymore.
+    $submit_title = t('Vote');
+    foreach ($nodes as $node) {
+      if ($storage->getPoints($node->nid)) {
+        $submit_title = t('Update vote');
+        break;
+      }
     }
-  }
-  if (!empty($form)) {
-    $form['submit_vote'] = array(
-      '#type' => 'submit',
-      '#value' => $submit_title,
-    );
+    $form['buttons']['next']['#value'] = $submit_title;
   }
   else {
+    unset($form['buttons']['next']);
     $available_points = $storage->getAvailablePoints();
     if (!$available_points) {
       $form['no_votes'] = array('#markup' => '<div>' . t('You cannot vote anymore because you used all your available points. Please use the cart to change the points distribution or to submit the votes.') . '</div>');
@@ -207,18 +289,18 @@ function sms_vote_widget($nodes) {
   $storage = SMSVoteTmpStorageFactory::getStorage();
   $remove_points_title = t('Remove points');
   $form = array();
+  ctools_include('ajax');
   foreach ($nodes as $node) {
     $max_points_for_node = $storage->getAvailablePointsForNode($node->nid);
     // We show the widget only if we can add points for the node.
     if (!empty($max_points_for_node)) {
-      $lang_code = field_language('node', $node, 'field_song');
       $nids[] = $node->nid;
       $current_points = $storage->getPoints($node->nid);
       $form['vote_' . $node->nid] = array(
         '#type' => 'select',
         '#id' => 'vote-widget-' . time() . rand(1000, 99999),
         '#options' => drupal_map_assoc(range(1, $max_points_for_node)),
-        '#title' => l(t('@song <span>by @band</span>', array('@song' => $node->field_song[$lang_code][0]['value'], '@band' => $node->title)), 'node/' . $node->nid, array('html' => true)),
+        '#title' => l($node->title, 'node/' . $node->nid, array('html' => TRUE)),
         '#default_value' => !empty($current_points) ? $current_points : 1,
         '#prefix' => !empty($current_points) ? '<div class="voting-choice">' : '',
         '#suffix' => !empty($current_points) ? '<div class="cancel-vote">' . ctools_ajax_text_button($remove_points_title, 'sms_vote/cancel/' . $node->nid . '/nojs', $remove_points_title) . '</div></div>' : ''
@@ -318,7 +400,8 @@ function sms_vote_checkout_form_validate(&$form, &$form_state) {
   if (!empty($form_state['svid'])) {
     $svid = $form_state['svid'];
     $vote_entity = entity_load_single('sms_vote', $svid);
-    $max_validation_fails = variable_get('sms_vote_max_fails', 3);
+    $sms_vote_settings = sms_vote_get_settings();
+    $max_validation_fails = $sms_vote_settings['max_fails'];
     // If the user exceded the maximum number of failures, stop here.
     if ($vote_entity->validation_fails >= $max_validation_fails) {
       form_set_error('code', t('You entered a wrong code too many times. Please contact our team for further instructions.'));

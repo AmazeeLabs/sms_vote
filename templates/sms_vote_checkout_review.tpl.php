@@ -12,7 +12,6 @@
 
 print '<div class="checkout-review">';
   foreach ($votes as $vote) {
-    $lang_code = field_language('node', $vote['node'], 'field_song');
-    print '<div>' . l(t('@song <span>by @band</span>', array('@song' => $vote['node']->field_song[$lang_code][0]['value'], '@band' => $vote['node']->title)), 'node/' . $vote['node']->nid, array('html' => true))  .' <span>' . format_plural($vote['points'], '@count point', '@count points') . '</span></div>';
+    print '<div>' . l($vote['node'], 'node/' . $vote['node']->nid, array('html' => TRUE))  .' <span>' . format_plural($vote['points'], '@count point', '@count points') . '</span></div>';
   }
 print '</div>';

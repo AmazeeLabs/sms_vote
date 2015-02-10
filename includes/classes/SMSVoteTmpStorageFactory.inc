@@ -19,7 +19,8 @@ class SMSVoteTmpStorageFactory {
           // @todo: we should maybe have a different exception here.
           throw new Exception(t('The vote tmp storage class was not found: !class', array('!class' => $class)));
         }
-        $storage = new $class(variable_get('sms_vote_max_points', 4));
+        $sms_vote_settings = sms_vote_get_settings();
+        $storage = new $class($sms_vote_settings['max_points']);
       }
       catch (Exception $e) {
         watchdog_exception('sms_vote', $e);
