@@ -15,6 +15,17 @@ function sms_vote_init() {
 }
 
 /**
+ * Returns the sms vote settings, optional for a specific node type.
+ *
+ * @param string $type
+ *  Optionsl, a node type for which to return the settings.
+ */
+function sms_vote_get_settings() {
+  $defaults = array('max_points' => 4, 'code_digits' => 4, 'max_fails' => 3, 'special_number' => '', 'enable_cart' => FALSE, 'force_distribute_all' => FALSE);
+  return variable_get('sms_vote_settings', $defaults);
+}
+
+/**
  * Implements hook_entity_info().
  */
 function sms_vote_entity_info() {
@@ -209,7 +220,7 @@ function sms_vote_sms_vote_points_update($vote_points_entity) {
  * Implements hook_sms_vote_points_delete().
  */
 function sms_vote_sms_vote_points_delete($vote_points_entity) {
-  $callbacks = drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
+  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
 }
 
 /**
@@ -236,71 +247,13 @@ function sms_vote_preprocess_sms_vote_checkout_review(&$vars) {
 }
 
 /**
- * Returns a random generated code.
- */
-function sms_vote_generate_code() {
-  $digits = variable_get('sms_vote_code_digits', 4);
-  // If the digits is for example 4, we generate a number between 1000
-  // (which is 10^(4-1)) and 9999 (which is 10^4 - 1)
-  $min = pow(10, $digits - 1);
-  $max = pow(10, $digits) - 1;
-  return rand($min, $max);
-}
-
-/**
- * Generates an amount of codes to be stored as predefined codes.
- *
- * @param int $amount
- *  The amount of codes to be generated.
- */
-function sms_vote_generate_codes($amount) {
-  $codes = array();
-  $index = 0;
-  $saved_codes = sms_vote_get_predefined_codes();
-  foreach ($saved_codes as $saved_code) {
-    $predefined_codes[] = $saved_code->code;
-  }
-  while ($index < $amount) {
-    $code = sms_vote_generate_code();
-    // Make sure the code is unique.
-    if (!in_array($code, $codes) && !in_array($code, $predefined_codes)) {
-      $index++;
-      $codes[] = $code;
-    }
-  }
-  return $codes;
-}
-
-/**
- * Stores an array of codes into the predefined codes table.
- *
- * @param array $codes
- *  An array with codes to be saved.
- */
-function sms_vote_store_codes($codes) {
-  $query = db_insert('sms_vote_predefined_codes')->fields(array('code', 'reserved'));
-  foreach ($codes as $code) {
-    $query->values(array($code, 0));
-  }
-  $query->execute();
-}
-
-/**
- * Returns a predefined code.
- */
-function sms_vote_get_predefined_codes() {
-  return db_select('sms_vote_predefined_codes', 'svpc')->fields('svpc')->execute()->fetchAll();
-}
-
-/**
  * Loads a predefined code by its id.
  *
  * @param int $cid
  *  The id of the code.
  */
 function sms_vote_predefined_code_load($cid) {
-  $query = db_select('sms_vote_predefined_codes', 'svpc')->fields('svpc')->condition('svpc.cid', $cid);
-  return $query->execute()->fetch();
+  return SMSVotePredefinedCodes::loadPredefinedCode($cid);
 }
 
 /**
@@ -342,15 +295,16 @@ function sms_vote_update_total_points($nid) {
 /**
  * Returns an array with valid codes for a vote entity.
  *
- * If the vote entity has the special number phone assigned, then any predefined
- * code is valid. Otherwise, only the code defined in the entity is valid.
+ * The predefined codes are always valid codes. In addition, if the phone number
+ * is not the special number, then a valid code is also the one that was
+ * generated for the vote, obviously.
  *
  * @param object $vote_entity
  *  A Vote Entity object.
  */
 function sms_vote_get_valid_codes_for_vote($vote_entity) {
   $valid_codes = array();
-  $codes = sms_vote_get_predefined_codes();
+  $codes = SMSVotePredefinedCodes::loadPredefinedCodes();
   foreach ($codes as $code) {
     // @todo: We could enhance this so that only the codes which are reserved
     // are valid.
@@ -366,23 +320,14 @@ function sms_vote_get_valid_codes_for_vote($vote_entity) {
 }
 
 /**
- * Deletes a code from the predefined codes table.
- *
- * @param string $code
- *  The code to delete.
- */
-function sms_vote_delete_code($code) {
-  db_delete('sms_vote_predefined_codes')->condition('code', $code)->execute();
-}
-
-/**
  * Checks if a phone matches the special phone number for the predefined codes.
  *
  * @param string $phone
  *  A phone number to match.
  */
 function sms_vote_is_special_number_phone($phone) {
-  $special_number = variable_get('sms_vote_special_number', '');
+  $sms_vote_settings = sms_vote_get_settings();
+  $special_number = $sms_vote_settings['sms_vote_special_number'];
   if (!empty($special_number) && $phone == $special_number) {
     return TRUE;
   }
@@ -404,6 +349,8 @@ function sms_vote_normalize_phone($phone) {
   // and it starts with 0. This is the case for 07xxxxxxxx
   if (ctype_digit($phone) && strlen($phone) == 10 && substr($phone, 0, 1) == '0') {
     // In this case we also replace the '0' in the beginning with +41.
+    // @todo: we do not really need this, but this could also be a setting. We
+    // will always most probably use this inside Switzerland.
     $phone = substr_replace($phone, '+41', 0, 1);
     return $phone;
   }

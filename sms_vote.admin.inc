@@ -9,30 +9,49 @@
  * Form constructor for the voting settings form.
  */
 function sms_vote_admin($form, &$form_state) {
-  $form['sms_vote_max_points'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum points'),
-    '#description' => t('The maximum number of points a user can give for a vote. This is also the exact number of points that an user must distribute among one or more bands.'),
-    '#default_value' => variable_get('sms_vote_max_points', 4),
-  );
-  $form['sms_vote_code_digits'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Code digits number'),
-    '#description' => t('How many digits should the confirmation code have.'),
-    '#default_value' => variable_get('sms_vote_code_digits', 4),
-  );
-  $form['sms_vote_max_fails'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum fails'),
-    '#description' => t('The maximum number of times the user can input an incorrect code.'),
-    '#default_value' => variable_get('sms_vote_max_fails', 3),
-  );
-  $form['sms_vote_special_number'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Phone number for predefined codes'),
-    '#description' => t('The special telephone number that can be used with the predefined codes.'),
-    '#default_value' => variable_get('sms_vote_special_number', ''),
-  );
+  $sms_vote_settings = sms_vote_get_settings();
+    $form['sms_vote_settings']['max_points'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum points'),
+      '#description' => t('The maximum number of points a user can give for a vote. This is also the exact number of points that an user must distribute (if "Enable voting cart" and "Force distributing all the points" are enabled below) among one or more nodes.'),
+      '#default_value' => $sms_vote_settings['max_points'],
+    );
+    $form['sms_vote_settings']['code_digits'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Code digits number'),
+      '#description' => t('How many digits should the confirmation code have.'),
+      '#default_value' => $sms_vote_settings['code_digits'],
+    );
+    $form['sms_vote_settings']['max_fails'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum fails'),
+      '#description' => t('The maximum number of times the user can input an incorrect code.'),
+      '#default_value' => $sms_vote_settings['max_fails'],
+    );
+    $form['sms_vote_settings']['special_number'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Phone number for predefined codes'),
+      '#description' => t('The special telephone number that can be used with the predefined codes.'),
+      '#default_value' => $sms_vote_settings['special_number'],
+    );
+    $form['sms_vote_settings']['enable_cart'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable voting cart'),
+      '#description' => t('If the cart is enabled, then the user will be able to submit points to more than one node in the same voting session.'),
+      '#default_value' => $sms_vote_settings['enable_cart'],
+    );
+    $form['sms_vote_settings']['force_distribute_all'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Force distributing all the points'),
+      '#description' => t('If this is enabled the user must distribute all the points in the "Maximum points" field, but only when the voting cart is enabled.'),
+      '#default_value' => $sms_vote_settings['force_distribute_all'],
+      '#states' => array(
+        'disabled' => array(
+          ':input[name="sms_vote_settings[enable_cart]"]' => array('checked' => FALSE)
+        ),
+      ),
+    );
+  $form['#tree'] = TRUE;
   return system_settings_form($form);
 }
 
@@ -40,21 +59,21 @@ function sms_vote_admin($form, &$form_state) {
  * Validate handler for the voting settings form.
  */
 function sms_vote_admin_validate(&$form, &$form_state) {
-  sms_vote_admin_check_numeric_and_positive('sms_vote_max_points', t('The maximum number of points has to be numeric and greater than 1.'), $form_state);
-  sms_vote_admin_check_numeric_and_positive('sms_vote_max_fails', t('The maximum number of fails has to be numeric and greater than 1.'), $form_state);
-  sms_vote_admin_check_numeric_and_positive('sms_vote_code_digits', t('The number of digits has to be numeric and greater than 1.'), $form_state);
+  sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['max_points'], t('The maximum number of points has to be numeric and greater than 1.'), $form['sms_vote_settings']['max_points']);
+  sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['max_fails'], t('The maximum number of fails has to be numeric and greater than 1.'), $form['sms_vote_settings']['max_fails']);
+  sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['code_digits'], t('The number of digits has to be numeric and greater than 1.'), $form['sms_vote_settings']['code_digits']);
 }
 
 /**
  * Helper validation function that checks if a value is numeric and bigger than
  * 1, and if yes it makes sure it is an integer.
  */
-function sms_vote_admin_check_numeric_and_positive($error_field, $error_message, &$form_state) {
-  if (!is_numeric($form_state['values'][$error_field]) || $form_state['values'][$error_field] < 1) {
-    form_set_error($error_field, $error_message);
+function sms_vote_admin_check_numeric_and_positive(&$value, $error_message, &$form_element) {
+  if (!is_numeric($value) || $value < 1) {
+    form_error($form_element, $error_message);
   }
   else {
-    $form_state['values'][$error_field] = (int)$form_state['values'][$error_field];
+    $value = (int)$value;
   }
 }
 
@@ -90,7 +109,7 @@ function sms_vote_code_status_change($status, $code, $js = NULL) {
  * Menu callback for the predefined codes page.
  */
 function sms_vote_admin_predefined_codes() {
-  $codes = sms_vote_get_predefined_codes();
+  $codes = SMSVotePredefinedCodes::loadPredefinedCodes();
   $header = array(t('Code'), t('Status'), t('Actions'));
   $rows = array();
   foreach ($codes as $code) {
@@ -164,6 +183,6 @@ function sms_vote_admin_generate_codes_form() {
  * Submit hanlder for the codes generator form.
  */
 function sms_vote_admin_generate_codes_form_submit($form, &$form_state) {
-  sms_vote_store_codes(sms_vote_generate_codes($form_state['values']['amount']));
+  SMSVotePredefinedCodes::generateAndStoreCodes($form_state['values']['amount']);
   drupal_set_message(t('The codes have been generated.'));
 }

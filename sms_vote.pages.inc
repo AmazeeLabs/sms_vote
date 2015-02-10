@@ -366,7 +366,7 @@ function sms_vote_checkout_form_submit(&$form, &$form_state) {
   if (empty($form_state['svid'])) {
     // This is the case when we save the votes into the database and (maybe also
     // clear the cache) send the SMS with the code.
-    $vote_entity = entity_create('sms_vote', array('phone' => $form_state['values']['phone'], 'status' => 0, 'code' => sms_vote_generate_code()));
+    $vote_entity = entity_create('sms_vote', array('phone' => $form_state['values']['phone'], 'status' => 0, 'code' => SMSVotePredefinedCodes::generateCode()));
     $saved = entity_save('sms_vote', $vote_entity);
     if ($saved !== FALSE) {
       $form_state['svid'] = $vote_entity->svid;
@@ -404,7 +404,7 @@ function sms_vote_checkout_form_submit(&$form, &$form_state) {
       // is the same as one of the predefined codes, and this would result in
       // deleting the predefined code when it was actually not used on purpose.
       if ($vote_entity->code != $form_state['values']['code']) {
-        sms_vote_delete_code($form_state['values']['code']);
+        SMSVotePredefinedCodes::deletePredefinedCode($form_state['values']['code']);
       }
       // Update also the code used with for this vote.
       $vote_entity->code = $form_state['values']['code'];

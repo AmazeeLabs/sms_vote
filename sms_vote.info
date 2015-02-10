@@ -18,3 +18,4 @@ files[] = includes/classes/SMSVoteTmpCtoolsCacheStorage.inc
 files[] = includes/classes/SMSVoteTmpStorageFactory.inc
 files[] = includes/classes/SMSVoteSenderFactory.inc
 files[] = includes/classes/SMSDefaultSender.inc
+files[] = includes/classes/SMSVotePredefinedCodes.inc
