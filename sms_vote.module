@@ -117,10 +117,11 @@ function sms_vote_theme() {
  * Implements hook_menu().
  */
 function sms_vote_menu() {
-  $items['sms_vote/checkout'] = array(
+  $items['sms_vote/checkout/%ctools_js'] = array(
     'type' => MENU_CALLBACK,
     'access callback' => TRUE,
     'page callback' => 'sms_vote_checkout_page',
+    'page arguments' => array(2),
     'title' => 'Votes checkout',
     'file' => 'sms_vote.checkout.inc'
   );
@@ -381,4 +382,58 @@ function sms_vote_normalize_phone($phone) {
  */
 function sms_vote_format_sms_message($code) {
   return t('Your SMS-code for voting on !site_name: !code', array('!site_name' => variable_get('site_name'), '!code' => $code));
+}
+
+/**
+ * Vote widget for a set of nodes that can be placed on a form.
+ *
+ * @param array $nodes
+ *  An array with node objects.
+ */
+function sms_vote_widget($nodes) {
+  $storage = SMSVoteTmpStorageFactory::getStorage();
+  $remove_points_title = t('Remove points');
+  $form = array();
+  ctools_include('ajax');
+  $sms_settings = sms_vote_get_settings();
+  $is_cart_enabled = sms_vote_is_cart_enabled();
+  foreach ($nodes as $node) {
+    // If the cart is enabled, then the maximum points we can give should be
+    // calculated by the storage. Otherwise, we use the site setting.
+    $max_points_for_node = $is_cart_enabled ? $storage->getAvailablePointsForNode($node->nid) : $sms_settings['max_points'];
+    // We show the widget only if we can add points for the node.
+    if (!empty($max_points_for_node)) {
+      $nids[] = $node->nid;
+      $current_points = $storage->getPoints($node->nid);
+      $form['vote_' . $node->nid] = array(
+        '#type' => 'select',
+        '#id' => 'vote-widget-' . time() . rand(1000, 99999),
+        '#options' => drupal_map_assoc(range(1, $max_points_for_node)),
+        '#title' => l($node->title, 'node/' . $node->nid, array('html' => TRUE)),
+        '#default_value' => !empty($current_points) ? $current_points : 1,
+        '#prefix' => !empty($current_points) ? '<div class="voting-choice">' : '',
+        '#suffix' => !empty($current_points) ? '<div class="cancel-vote">' . ctools_ajax_text_button($remove_points_title, 'sms_vote/cancel/' . $node->nid . '/nojs', $remove_points_title) . '</div></div>' : ''
+      );
+    }
+  }
+  if (!empty($nids)) {
+    $form['nids'] = array(
+      '#type' => 'value',
+      '#value' => $nids,
+    );
+  }
+  return $form;
+}
+
+/**
+ * Helper function that returns an array of ajax commands to dismiss the modal
+ * and show the messages in the page.
+ */
+function sms_vote_commands_dismiss_modal_and_show_messages() {
+  $commands = array();
+  ctools_include('modal');
+  $commands[] = ctools_modal_command_dismiss();
+  $commands[] = ajax_command_remove('div.messages');
+  $commands[] = ajax_command_prepend('div.main-content,div.pane-page-content', theme('status_messages'));
+  return $commands;
 }

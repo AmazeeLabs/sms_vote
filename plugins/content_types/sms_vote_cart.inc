@@ -23,7 +23,7 @@ function sms_vote_cart_render($subtype, $conf, $args, $context) {
   // We show the cart only if the setting is enabled.
   $sms_vote_settings = sms_vote_get_settings();
   if (sms_vote_is_cart_enabled()) {
-    module_load_include('inc', 'sms_vote', 'sms_vote.pages');
+    module_load_include('inc', 'sms_vote', 'sms_vote.cart');
     $storage = SMSVoteTmpStorageFactory::getStorage();
     $all_points = $storage->getAllPoints();
     // We need this div to appear all the time.

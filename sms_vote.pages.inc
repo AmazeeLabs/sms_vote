@@ -55,15 +55,20 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
 
   $commands = array();
   if (!empty($form_state['dismiss_and_update_cart'])) {
-    $commands[] = ctools_modal_command_dismiss();
+    $commands += sms_vote_commands_dismiss_modal_and_show_messages();
+    module_load_include('inc', 'sms_vote', 'sms_vote.cart');
     $cart_form = drupal_get_form('sms_vote_voting_cart');
     $commands[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($cart_form));
   }
   elseif (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
     // Dismiss the modal and show the messages on the site.
-    $commands[] = ctools_modal_command_dismiss();
-    $commands[] = ajax_command_remove('div.messages');
-    $commands[] = ajax_command_prepend('div.main-content,div.pane-page-content', theme('status_messages'));
+    $commands += sms_vote_commands_dismiss_modal_and_show_messages();
+    // Even that we should not have this case happening, because if we reach to
+    // the complete state in this wizard this means we do not use a cart, we
+    // still remove any cart contents (which is in the .voting block).
+    if (!empty($form_state['complete'])) {
+      $commands[] = ajax_command_remove('.voting-block');
+    }
   }
   else {
     $output = drupal_render($form);
@@ -116,14 +121,17 @@ function sms_vote_vote_cancel_page($node, $js = NULL) {
   // Make sure we dismiss any modal window.
   $output[] = ctools_modal_command_dismiss();
 
-  // Update the voting cart.
-  $points = $storage->getAllPoints();
-  if (!empty($points)) {
-    $form = drupal_get_form('sms_vote_voting_cart');
-    $output[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($form));
-  }
-  else {
-    $output[] = ajax_command_html('.sms-cart-form-wrapper', '');
+  // Update the voting cart, if we use the cart.
+  if (sms_vote_is_cart_enabled()) {
+    $points = $storage->getAllPoints();
+    if (!empty($points)) {
+      module_load_include('inc', 'sms_vote', 'sms_vote.cart');
+      $form = drupal_get_form('sms_vote_voting_cart');
+      $output[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($form));
+    }
+    else {
+      $output[] = ajax_command_html('.sms-cart-form-wrapper', '');
+    }
   }
   print ajax_render($output);
   exit;
@@ -166,139 +174,19 @@ function sms_vote_vote_form($form, &$form_state, $nodes) {
 }
 
 /**
- * Submit handler for the voting form.
+ * Submit handler for the voting form, or any form that contain the
+ * sms_vote_widget.
+ *
+ * Important is that this has to be specifically added as a submit handler. It
+ * is added automatically only for the sms_vote_vote_form() form.
  */
 function sms_vote_vote_form_submit(&$form, &$form_state) {
   $storage = SMSVoteTmpStorageFactory::getStorage();
+  // If we do not use a cart, then we clear the storage.
+  if (!sms_vote_is_cart_enabled()) {
+    $storage->clearStorage();
+  }
   foreach ($form_state['values']['nids'] as $nid) {
     $storage->storePoints($nid, $form_state['values']['vote_' . $nid]);
   }
-}
-
-/**
- * Form constructor for the voting cart.
- */
-function sms_vote_voting_cart($form, &$form_state) {
-  $storage = SMSVoteTmpStorageFactory::getStorage();
-  $points = $storage->getAllPoints();
-  $form = array();
-  // Make sure this file is included in ajax requests.
-  form_load_include($form_state, 'inc', 'sms_vote', 'sms_vote.pages');
-  if (!empty($points)) {
-    $nodes = array();
-    foreach ($points as $nid => $value) {
-      $nodes[] = node_load($nid);
-    }
-    $form = sms_vote_widget($nodes);
-    // Attach the ajax behaviors on the select elements.
-    foreach ($form['nids']['#value'] as $nid) {
-      $form['vote_' . $nid]['#ajax'] = array(
-        'callback' => 'sms_vote_cart_form_ajax_submit',
-        'wrapper' => 'sms-vote-voting-cart',
-      );
-    }
-    $form['update'] = array(
-      '#type' => 'submit',
-      '#value' => t('Update'),
-      '#name' => 'update',
-      // The button should be hidden if we have js. If it is not hidden, then
-      // it should submit using the same handler as the single vote form.
-      '#submit' => array('sms_vote_vote_form_submit'),
-    );
-    $available_points = $storage->getAvailablePoints();
-    // If we do not have any available points, then show the "Submit vote"
-    // button so that the user can finish the vote process.
-    if (!empty($available_points)) {
-      $form['available_points'] = array(
-        '#markup' => '<div id="available-points">' . t('Available points to give: @number', array('@number' => format_plural($available_points, '@count point', '@count points'))) . '</div>',
-      );
-    }
-    // We show the submit votes button if we do not have any points to give, or
-    // if the distribution of all points is not required.
-    $sms_vote_settings = sms_vote_get_settings();
-    if (empty($available_points) || empty($sms_vote_settings['force_distribute_all'])) {
-      $form['submit_votes'] = array(
-        '#type' => 'submit',
-        '#value' => t('Submit votes'),
-        '#ajax' => array(
-          'callback' => 'sms_vote_cart_submit_votes_ajax_submit',
-        ),
-        '#submit' => array('sms_vote_cart_submit_votes_submit'),
-      );
-    }
-  }
-  $form['#id'] = 'sms-vote-voting-cart';
-  $form['#prefix'] = '<div class="voting-block"><h2>' . t('Your votes') . '</h2>';
-  $form['#suffix'] = '</div>';
-  return $form;
-}
-
-/**
- * Ajax submit handler for the cart form..
- */
-function sms_vote_cart_form_ajax_submit($form, $form_state) {
-  sms_vote_vote_form_submit($form, $form_state);
-  $rebuild_form = drupal_rebuild_form('sms_vote_voting_cart', $form_state, $form);
-  // We do not need the prefix and the suffix now.
-  unset($rebuild_form['#prefix'], $rebuild_form['#suffix']);
-  return $rebuild_form;
-}
-
-/**
- * Submit handler for the 'Submit votes' button.
- */
-function sms_vote_cart_submit_votes_submit($form, &$form_state) {
-  // Just redirect the user to the checkout page.
-  $form_state['redirect'] = 'sms_vote/checkout';
-}
-
-/**
- * Ajax submit handler for the the 'Submit votes' button.
- */
-function sms_vote_cart_submit_votes_ajax_submit($form, &$form_state) {
-  $commands = array();
-  $checkout_review = theme('sms_vote_checkout_review');
-  $checkout_form = drupal_get_form('sms_vote_checkout_form');
-  $commands[] = ajax_command_replace('#sms-vote-voting-cart', $checkout_review . drupal_render($checkout_form));
-  return array(
-    '#type' => 'ajax',
-    '#commands' => $commands,
-  );
-}
-
-/**
- * Vote widget for a set of nodes that can be placed on a form.
- *
- * @param array $nodes
- *  An array with node objects.
- */
-function sms_vote_widget($nodes) {
-  $storage = SMSVoteTmpStorageFactory::getStorage();
-  $remove_points_title = t('Remove points');
-  $form = array();
-  ctools_include('ajax');
-  foreach ($nodes as $node) {
-    $max_points_for_node = $storage->getAvailablePointsForNode($node->nid);
-    // We show the widget only if we can add points for the node.
-    if (!empty($max_points_for_node)) {
-      $nids[] = $node->nid;
-      $current_points = $storage->getPoints($node->nid);
-      $form['vote_' . $node->nid] = array(
-        '#type' => 'select',
-        '#id' => 'vote-widget-' . time() . rand(1000, 99999),
-        '#options' => drupal_map_assoc(range(1, $max_points_for_node)),
-        '#title' => l($node->title, 'node/' . $node->nid, array('html' => TRUE)),
-        '#default_value' => !empty($current_points) ? $current_points : 1,
-        '#prefix' => !empty($current_points) ? '<div class="voting-choice">' : '',
-        '#suffix' => !empty($current_points) ? '<div class="cancel-vote">' . ctools_ajax_text_button($remove_points_title, 'sms_vote/cancel/' . $node->nid . '/nojs', $remove_points_title) . '</div></div>' : ''
-      );
-    }
-  }
-  if (!empty($nids)) {
-    $form['nids'] = array(
-      '#type' => 'value',
-      '#value' => $nids,
-    );
-  }
-  return $form;
 }

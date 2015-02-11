@@ -8,7 +8,8 @@
 /**
  * Checkout page for votes.
  */
-function sms_vote_checkout_page() {
+function sms_vote_checkout_page($js = NULL, $step = NULL) {
+  // Make sure first that we gave all the points if required.
   $sms_vote_settings = sms_vote_get_settings();
   if (!empty($sms_vote_settings['force_distribute_all'])) {
     $storage = SMSVoteTmpStorageFactory::getStorage();
@@ -17,12 +18,68 @@ function sms_vote_checkout_page() {
     // we must distribute all the points.
     if (!empty($available_points)) {
       drupal_set_message(t('You still have @number points to give before you can checkout.', array('@number' => $available_points)), 'warning');
-      drupal_goto('<front>');
+      if (!$js) {
+        drupal_goto('<front>');
+      }
+      else {
+        $commands = sms_vote_commands_dismiss_modal_and_show_messages();
+        print ajax_render($commands);
+      }
+      return;
     }
   }
-  return array(
-    'checkout_form' => drupal_get_form('sms_vote_checkout_form')
+  // If we are here, we can show the checkout form.
+  $form_info = array(
+    'id' => 'sms_vote_checkout',
+    'path' => "sms_vote/checkout/" . ($js ? 'ajax' : 'nojs') . "/%step",
+    'show cancel' => TRUE,
+    'next callback' =>  'sms_vote_checkout_next_process',
+    'finish callback' => 'sms_vote_checkout_finish_process',
+    'cancel callback' => 'sms_vote_checkout_cancel_process',
+    'order' => array(
+      'enter_phone' => t('Enter phone number'),
+      'confirm_code' => t('Confirm Code'),
+    ),
+    'forms' => array(
+      'enter_phone' => array(
+        'form id' => 'sms_vote_checkout_form',
+      ),
+      'confirm_code' => array(
+        'form id' => 'sms_vote_checkout_form',
+      ),
+    ),
   );
+  if (empty($step)) {
+    $step = 'enter_phone';
+  }
+  $form_state = array(
+    'ajax' => $js,
+  );
+  ctools_include('wizard');
+  $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
+  if (!$js) {
+    // @todo: handle the same cases as for the js.
+    return $form;
+  }
+  else {
+    ctools_include('modal');
+    ctools_include('ajax');
+    // If we cancel or complete the process, we just dismiss the modal and show
+    // the messages.
+    if (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+      // Dismiss the modal and show the messages on the site.
+      $commands = sms_vote_commands_dismiss_modal_and_show_messages();
+      if (!empty($form_state['complete'])) {
+        $commands[] = ajax_command_remove('.voting-block');
+      }
+    }
+    else {
+      // Otherwise, we just render the form.
+      $output = drupal_render($form);
+      $commands = ctools_modal_form_render($form_state, $output);
+    }
+    print ajax_render($commands);
+  }
 }
 
 /**
