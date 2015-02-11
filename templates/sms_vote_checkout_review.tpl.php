@@ -12,6 +12,6 @@
 
 print '<div class="checkout-review">';
   foreach ($votes as $vote) {
-    print '<div>' . l($vote['node'], 'node/' . $vote['node']->nid, array('html' => TRUE))  .' <span>' . format_plural($vote['points'], '@count point', '@count points') . '</span></div>';
+    print '<div>' . l($vote['node']->title, 'node/' . $vote['node']->nid, array('html' => TRUE))  .' <span>' . format_plural($vote['points'], '@count point', '@count points') . '</span></div>';
   }
 print '</div>';

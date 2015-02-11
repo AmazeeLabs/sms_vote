@@ -26,6 +26,14 @@ function sms_vote_get_settings() {
 }
 
 /**
+ * Helper function to check if the cart is enabled for the voting system.
+ */
+function sms_vote_is_cart_enabled() {
+  $sms_settings = sms_vote_get_settings();
+  return $sms_settings['enable_cart'];
+}
+
+/**
  * Implements hook_entity_info().
  */
 function sms_vote_entity_info() {
@@ -114,7 +122,7 @@ function sms_vote_menu() {
     'access callback' => TRUE,
     'page callback' => 'sms_vote_checkout_page',
     'title' => 'Votes checkout',
-    'file' => 'sms_vote.pages.inc'
+    'file' => 'sms_vote.checkout.inc'
   );
   $items['sms_vote/%node/%ctools_js'] = array(
     'type' => MENU_CALLBACK,
@@ -327,7 +335,7 @@ function sms_vote_get_valid_codes_for_vote($vote_entity) {
  */
 function sms_vote_is_special_number_phone($phone) {
   $sms_vote_settings = sms_vote_get_settings();
-  $special_number = $sms_vote_settings['sms_vote_special_number'];
+  $special_number = $sms_vote_settings['special_number'];
   if (!empty($special_number) && $phone == $special_number) {
     return TRUE;
   }

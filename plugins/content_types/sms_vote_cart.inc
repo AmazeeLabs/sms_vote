@@ -22,7 +22,7 @@ function sms_vote_cart_render($subtype, $conf, $args, $context) {
   $block = new stdClass;
   // We show the cart only if the setting is enabled.
   $sms_vote_settings = sms_vote_get_settings();
-  if (!empty($sms_vote_settings['enable_cart'])) {
+  if (sms_vote_is_cart_enabled()) {
     module_load_include('inc', 'sms_vote', 'sms_vote.pages');
     $storage = SMSVoteTmpStorageFactory::getStorage();
     $all_points = $storage->getAllPoints();
