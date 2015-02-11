@@ -28,7 +28,7 @@ function sms_vote_link_render($subtype, $conf, $args, $context) {
 
     // Add CTools' javascript to the page.
     ctools_modal_add_js();
-    $vote_title = t('Vote');
+    $vote_title = t('Vote for "!node"', array('!node' => $node->title));
     $block->content = ctools_modal_text_button($vote_title, 'sms_vote/' . $node->nid . '/nojs', $vote_title, 'ctools-modal-modal-popup-small');
   }
 

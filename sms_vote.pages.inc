@@ -9,12 +9,7 @@
  * Page callback for the sms vote page.
  */
 function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
-  if (!$js) {
-    // @todo: We have to handle this nicer.
-    return drupal_get_form('sms_vote_vote_form', array($node));
-  }
-  ctools_include('modal');
-  ctools_include('ajax');
+
   $form_info = array(
     'id' => 'sms_vote',
     'path' => "sms_vote/" . $node->nid . "/" . ($js ? 'ajax' : 'nojs') . "/%step",
@@ -66,28 +61,42 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
   ctools_include('wizard');
   $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
 
-  $commands = array();
-  if (!empty($form_state['dismiss_and_update_cart'])) {
-    $commands += sms_vote_commands_dismiss_modal_and_show_messages();
-    module_load_include('inc', 'sms_vote', 'sms_vote.cart');
-    $cart_form = drupal_get_form('sms_vote_voting_cart');
-    $commands[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($cart_form));
-  }
-  elseif (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
-    // Dismiss the modal and show the messages on the site.
-    $commands += sms_vote_commands_dismiss_modal_and_show_messages();
-    // Even that we should not have this case happening, because if we reach to
-    // the complete state in this wizard this means we do not use a cart, we
-    // still remove any cart contents (which is in the .voting block).
-    if (!empty($form_state['complete'])) {
-      $commands[] = ajax_command_remove('.voting-block');
+  if ($js) {
+    ctools_include('modal');
+    ctools_include('ajax');
+    $commands = array();
+    if (!empty($form_state['dismiss_and_update_cart'])) {
+      $commands += sms_vote_commands_dismiss_modal_and_show_messages();
+      module_load_include('inc', 'sms_vote', 'sms_vote.cart');
+      $cart_form = drupal_get_form('sms_vote_voting_cart');
+      $commands[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($cart_form));
     }
+    elseif (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+      // Dismiss the modal and show the messages on the site.
+      $commands += sms_vote_commands_dismiss_modal_and_show_messages();
+      // Even that we should not have this case happening, because if we reach to
+      // the complete state in this wizard this means we do not use a cart, we
+      // still remove any cart contents (which is in the .voting block).
+      if (!empty($form_state['complete'])) {
+        $commands[] = ajax_command_remove('.voting-block');
+      }
+    }
+    else {
+      $output = drupal_render($form);
+      $commands = ctools_modal_form_render($form_state, $output);
+    }
+    print ajax_render($commands);
   }
   else {
-    $output = drupal_render($form);
-    $commands = ctools_modal_form_render($form_state, $output);
+    // In any case when we exit the wizard, we just redirect.
+    // @todo: This is not working 100% correct. Same as sms_vote_checkout_page().
+    if (!empty($form_state['dismiss_and_update_cart']) || !empty($form_state['cancel']) || !empty($form_state['complete'])) {
+      drupal_goto('node/' . $node->nid);
+    }
+    else {
+      return $form;
+    }
   }
-  print ajax_render($commands);
 }
 
 /**

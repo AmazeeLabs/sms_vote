@@ -55,8 +55,13 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
   ctools_include('wizard');
   $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
   if (!$js) {
-    // @todo: handle the same cases as for the js.
-    return $form;
+    // @todo: This is not working 100% correct.
+    if (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+      drupal_goto();
+    }
+    else {
+      return $form;
+    }
   }
   else {
     ctools_include('modal');
