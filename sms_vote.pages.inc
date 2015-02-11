@@ -20,8 +20,6 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
     'path' => "sms_vote/" . $node->nid . "/" . ($js ? 'ajax' : 'nojs') . "/%step",
     'show cancel' => TRUE,
     'next callback' =>  'sms_vote_next_process',
-    'finish callback' => 'sms_vote_finish_process',
-    'cancel callback' => 'sms_vote_cancel_process',
     'order' => array(
       'vote' => t('Vote'),
       'enter_phone' => t('Enter phone number'),
@@ -41,15 +39,30 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
       ),
     ),
   );
-  if (empty($step)) {
-    $step = 'vote';
-  }
   $form_state = array(
     'ajax' => $js,
     'build_info' => array(
       'args' => array(0 => array($node)),
     )
   );
+  if (empty($step)) {
+    $step = 'vote';
+    $sms_vote_settings = sms_vote_get_settings();
+    // If we are on the vote step and the maximum points we can give is 1, and
+    // we do not have the cart enabled, the we just skip this step.
+    // @todo: If it would make sense to have a different value than '1' point
+    // then we can also do that with a setting. It would be something like:
+    // "Give all the points to one vote".
+    if (!sms_vote_is_cart_enabled() && $sms_vote_settings['max_points'] == 1) {
+      // The next step is the one where we enter the phone.
+      $step = 'enter_phone';
+      $storage = SMSVoteTmpStorageFactory::getStorage();
+      // Make sure we have no other votes in the storage.
+      $storage->clearStorage();
+      // And store all the points.
+      $storage->storePoints($node->nid, $sms_vote_settings['max_points']);
+    }
+  }
   ctools_include('wizard');
   $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
 
@@ -87,23 +100,6 @@ function sms_vote_next_process(&$form_state) {
   if (sms_vote_is_cart_enabled()) {
     $form_state['dismiss_and_update_cart'] = TRUE;
   }
-}
-
-/**
- * Flags the voting (checkout) process as finished.
- * It is a 'finish callback' in a ctools wizard form.
- */
-function sms_vote_finish_process(&$form_state) {
-  $form_state['complete'] = TRUE;
-}
-
-/**
- * Flags the voting (checkout) process as canceled.
- * It is a 'cancel callback' in a ctools wizard form.
- */
-function sms_vote_cancel_process(&$form_state) {
-  // @todo: delete the votes for the node.
-  $form_state['cancel'] = TRUE;
 }
 
 /**

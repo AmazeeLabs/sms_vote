@@ -33,9 +33,6 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
     'id' => 'sms_vote_checkout',
     'path' => "sms_vote/checkout/" . ($js ? 'ajax' : 'nojs') . "/%step",
     'show cancel' => TRUE,
-    'next callback' =>  'sms_vote_checkout_next_process',
-    'finish callback' => 'sms_vote_checkout_finish_process',
-    'cancel callback' => 'sms_vote_checkout_cancel_process',
     'order' => array(
       'enter_phone' => t('Enter phone number'),
       'confirm_code' => t('Confirm Code'),
