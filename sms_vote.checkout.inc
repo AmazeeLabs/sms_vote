@@ -199,6 +199,7 @@ function sms_vote_checkout_form_validate(&$form, &$form_state) {
  */
 function sms_vote_checkout_form_submit(&$form, &$form_state) {
   if (empty($form_state['svid'])) {
+    global $language;
     // This is the case when we save the votes into the database and (maybe also
     // clear the cache) send the SMS with the code.
     // @todo: we should make sure here that the generated code is not a
@@ -210,7 +211,7 @@ function sms_vote_checkout_form_submit(&$form, &$form_state) {
     // happening, but it could). It will not harm the system, the only problem
     // will be that the predefined code will not be deleted, so it can be used
     // again by another person, if she knows it.
-    $vote_entity = entity_create('sms_vote', array('phone' => $form_state['values']['phone'], 'status' => 0, 'code' => SMSVotePredefinedCodes::generateCode()));
+    $vote_entity = entity_create('sms_vote', array('phone' => $form_state['values']['phone'], 'status' => 0, 'created' => REQUEST_TIME, 'language' => $language->language, 'code' => SMSVotePredefinedCodes::generateCode()));
     $saved = entity_save('sms_vote', $vote_entity);
     if ($saved !== FALSE) {
       $form_state['svid'] = $vote_entity->svid;

@@ -56,6 +56,13 @@ function sms_vote_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'language' => array(
+        'description' => 'The language of the vote.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+      ),
     ),
     'primary key' => array('svid'),
     'indexes' => array(

@@ -37,9 +37,11 @@ function sms_vote_is_cart_enabled() {
  * Implements hook_entity_info().
  */
 function sms_vote_entity_info() {
+  // If we need to improve the performance inside the controllers, we can extend
+  // them with our classes.
   $entities['sms_vote'] = array(
     'label' => t('SMS Vote'),
-    'controller class' => 'SMSVoteEntityController',
+    'controller class' => 'EntityAPIController',
     'base table' => 'sms_vote',
     'access callback' => 'sms_vote_vote_access',
     'entity keys' => array(
@@ -48,7 +50,7 @@ function sms_vote_entity_info() {
   );
   $entities['sms_vote_points'] = array(
     'label' => t('SMS Vote Points'),
-    'controller class' => 'SMSVotePointsEntityController',
+    'controller class' => 'EntityAPIController',
     'base table' => 'sms_vote_points',
     'access callback' => 'sms_vote_vote_points_access',
     'entity keys' => array(
