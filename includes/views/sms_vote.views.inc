@@ -77,6 +77,25 @@ function sms_vote_views_data() {
     ),
   );
 
+  // The code sent by SMS.
+  $data['sms_vote']['language'] = array(
+    'title' => t('Language'),
+    'help' => t('Language'),
+    'field' => array(
+      'handler' => 'views_handler_field_locale_language',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_locale_language',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_locale_language',
+    ),
+  );
+
   // The status of the vote.
   $data['sms_vote']['status'] = array(
     'title' => t('Vote status'),

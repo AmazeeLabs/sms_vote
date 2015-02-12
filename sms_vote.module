@@ -435,7 +435,7 @@ function sms_vote_commands_dismiss_modal_and_show_messages() {
   ctools_include('modal');
   $commands[] = ctools_modal_command_dismiss();
   $commands[] = ajax_command_remove('div.messages');
-  $commands[] = ajax_command_prepend('div.main-content,div.pane-page-content', theme('status_messages'));
+  $commands[] = ajax_command_prepend('body', theme('status_messages'));
   return $commands;
 }
 
