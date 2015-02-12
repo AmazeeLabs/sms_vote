@@ -86,6 +86,20 @@ class SMSVoteTmpCtoolsCacheStorage extends SMSVoteTmpStorage {
   }
 
   /**
+   * @see SMSVoteTmpStorageInterface::storeProperty()
+   */
+  public function storeProperty($key, $value) {
+    ctools_object_cache_set('sms_vote', 'sms_vote_' . $key, $value, $this->sid);
+  }
+
+  /**
+   * @see SMSVoteTmpStorageInterface::getProperty()
+   */
+  public function getProperty($key) {
+    return ctools_object_cache_get('sms_vote', 'sms_vote_' . $key, FALSE, $this->sid);
+  }
+
+  /**
    * @see SMSVoteTmpStorageInterface::clearStorage()
    */
   public function clearStorage() {

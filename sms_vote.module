@@ -21,7 +21,7 @@ function sms_vote_init() {
  *  Optionsl, a node type for which to return the settings.
  */
 function sms_vote_get_settings() {
-  $defaults = array('max_points' => 4, 'code_digits' => 4, 'max_fails' => 3, 'special_number' => '', 'enable_cart' => FALSE, 'force_distribute_all' => FALSE);
+  $defaults = array('max_points' => 4, 'code_digits' => 4, 'max_fails' => 3, 'special_number' => '', 'enable_cart' => FALSE, 'force_distribute_all' => FALSE, 'activate_ajax' => TRUE);
   return variable_get('sms_vote_settings', $defaults);
 }
 
@@ -394,7 +394,6 @@ function sms_vote_widget($nodes) {
   $storage = SMSVoteTmpStorageFactory::getStorage();
   $remove_points_title = t('Remove points');
   $form = array();
-  ctools_include('ajax');
   $sms_settings = sms_vote_get_settings();
   $is_cart_enabled = sms_vote_is_cart_enabled();
   foreach ($nodes as $node) {
@@ -412,7 +411,7 @@ function sms_vote_widget($nodes) {
         '#title' => l($node->title, 'node/' . $node->nid, array('html' => TRUE)),
         '#default_value' => !empty($current_points) ? $current_points : 1,
         '#prefix' => !empty($current_points) ? '<div class="voting-choice">' : '',
-        '#suffix' => !empty($current_points) ? '<div class="cancel-vote">' . ctools_ajax_text_button($remove_points_title, 'sms_vote/cancel/' . $node->nid . '/nojs', $remove_points_title) . '</div></div>' : ''
+        '#suffix' => !empty($current_points) ? '<div class="cancel-vote">' . sms_vote_l($remove_points_title, 'sms_vote/cancel/' . $node->nid . '/nojs', array('ui' => 'ajax', 'query' => drupal_get_destination())) . '</div></div>' : ''
       );
     }
   }
@@ -436,4 +435,36 @@ function sms_vote_commands_dismiss_modal_and_show_messages() {
   $commands[] = ajax_command_remove('div.messages');
   $commands[] = ajax_command_prepend('div.main-content,div.pane-page-content', theme('status_messages'));
   return $commands;
+}
+
+/**
+ * Helper function to show a link on the page.
+ *
+ * In the $options array it can get a paramter: 'ui' which can be: 'modal' or
+ * 'ajax'. If any of these, and the ajax setting is enabled, it will use the
+ * ctools ajax or modal features. Otherwise, it will just print the normal link
+ *
+ * All the parameters have the same meaning as for l(), but it is important to
+ * know that if the link will be created with ctools, the $options will not be
+ * used.
+ */
+function sms_vote_l($title, $path, $options = array()) {
+  if (!empty($options['ui'])) {
+    if ($options['ui'] == 'modal' || $options['ui'] == 'ajax') {
+      $sms_vote_settings = sms_vote_get_settings();
+      if (!empty($sms_vote_settings['activate_ajax'])) {
+        ctools_include('ajax');
+        if ($options['ui'] == 'modal') {
+          ctools_include('modal');
+          ctools_modal_add_js();
+          return ctools_modal_text_button($title, $path, $title);
+        }
+        else {
+          return ctools_ajax_text_button($title, $path, $title);
+        }
+      }
+    }
+  }
+  // By default, return a normal link.
+  return l($title, $path, $options);
 }

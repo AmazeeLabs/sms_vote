@@ -68,6 +68,20 @@ class SMSVoteTmpSessionStorage extends SMSVoteTmpStorage {
   }
 
   /**
+   * @see SMSVoteTmpStorageInterface::storeProperty()
+   */
+  public function storeProperty($key, $value) {
+    $_SESSION[$key] = $value;
+  }
+
+  /**
+   * @see SMSVoteTmpStorageInterface::getProperty()
+   */
+  public function getProperty($key) {
+    return isset($_SESSION[$key]) ? $_SESSION[$key] : NULL;
+  }
+
+  /**
    * @see SMSVoteTmpStorageInterface::clearStorage()
    */
   public function clearStorage() {

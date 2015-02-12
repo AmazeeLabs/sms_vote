@@ -47,13 +47,10 @@ function sms_vote_voting_cart($form, &$form_state) {
     // if the distribution of all points is not required.
     $sms_vote_settings = sms_vote_get_settings();
     if (empty($available_points) || empty($sms_vote_settings['force_distribute_all'])) {
-      ctools_include('ajax');
-      ctools_include('modal');
-      ctools_modal_add_js();
       $submit_title = t('Submit votes');
       $form['submit_votes'] = array(
         '#type' => 'item',
-        '#markup' => ctools_modal_text_button($submit_title, 'sms_vote/checkout/nojs', $submit_title, 'ctools-modal-modal-popup-small'),
+        '#markup' => sms_vote_l($submit_title, 'sms_vote/checkout/nojs', array('ui' => 'modal', 'query' => drupal_get_destination())),
       );
     }
   }

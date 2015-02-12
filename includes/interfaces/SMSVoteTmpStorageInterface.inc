@@ -57,6 +57,25 @@ interface SMSVoteTmpStorageInterface {
   public function getAvailablePointsForNode($nid);
 
   /**
+   * Stores a property in the current session.
+   *
+   * @param string $key
+   *  The key of the property.
+   *
+   * @param string $value
+   *  The value to store.
+   */
+  public function storeProperty($key, $value);
+
+  /**
+   * Returns the value of a stored property.
+   *
+   * @param string $key
+   *  The key of the property to return.
+   */
+  public function getProperty($key);
+
+  /**
    * Clears everything from the temporary storage.
    */
   public function clearStorage();

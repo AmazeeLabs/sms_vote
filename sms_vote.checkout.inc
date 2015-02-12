@@ -55,7 +55,6 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
   ctools_include('wizard');
   $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
   if (!$js) {
-    // @todo: This is not working 100% correct.
     if (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
       drupal_goto();
     }
@@ -96,7 +95,12 @@ function sms_vote_checkout_form($form, &$form_state) {
     '#description' => t('Please format the phone either like 07xxxxxxxx or using the 10+ digits international format, without any separators between digits and starting with "+" (for example +417xxxxxxxx)'),
     '#required' => TRUE,
   );
-  if (!empty($form_state['svid'])) {
+  $storage = SMSVoteTmpStorageFactory::getStorage();
+  $svid = $storage->getProperty('svid');
+  if (!empty($svid)) {
+    $form_state['svid'] = $svid;
+    $vote_entity = entity_load_single('sms_vote', $form_state['svid']);
+    $form['phone']['#default_value'] = $vote_entity->phone;
     $form['resend'] = array(
       '#type' => 'submit',
       '#value' => t('Resend code'),
@@ -112,6 +116,10 @@ function sms_vote_checkout_form($form, &$form_state) {
       '#title' => t('Code'),
       '#required' => TRUE,
     );
+    $form['buttons']['return']['#value'] = t('Submit code');
+  }
+  else {
+    $form['buttons']['next']['#value'] = t('Send SMS');
   }
   // If we have the cart enabled, then we show a review of the votes.
   if (sms_vote_is_cart_enabled()) {
@@ -206,6 +214,8 @@ function sms_vote_checkout_form_submit(&$form, &$form_state) {
     $saved = entity_save('sms_vote', $vote_entity);
     if ($saved !== FALSE) {
       $form_state['svid'] = $vote_entity->svid;
+      $storage = SMSVoteTmpStorageFactory::getStorage();
+      $storage->storeProperty('svid', $vote_entity->svid);
     }
 
     // Send the SMS with the code, but only if the phone is not the special one

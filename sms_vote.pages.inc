@@ -88,9 +88,10 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
     print ajax_render($commands);
   }
   else {
-    // In any case when we exit the wizard, we just redirect.
-    // @todo: This is not working 100% correct. Same as sms_vote_checkout_page().
-    if (!empty($form_state['dismiss_and_update_cart']) || !empty($form_state['cancel']) || !empty($form_state['complete'])) {
+    // Redirect if:
+    // 1. We clicked on cancel or we completed the wizard.
+    // 2. Or, we have the cart enabled and we are not on the vote step.
+    if (($step != 'vote' && sms_vote_is_cart_enabled()) || !empty($form_state['cancel']) || !empty($form_state['complete'])) {
       drupal_goto('node/' . $node->nid);
     }
     else {
@@ -105,7 +106,6 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
 function sms_vote_next_process(&$form_state) {
   // When clicking on the 'Continue' on a vote form, and we have the cart
   // enabled then we want to dismiss the modal window and update the cart.
-  $sms_vote_settings = sms_vote_get_settings();
   if (sms_vote_is_cart_enabled()) {
     $form_state['dismiss_and_update_cart'] = TRUE;
   }

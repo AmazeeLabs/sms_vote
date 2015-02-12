@@ -22,14 +22,9 @@ function sms_vote_link_render($subtype, $conf, $args, $context) {
   $block = new stdClass;
   $node = isset($context->data) ? $context->data : NULL;
   if (!empty($node)) {
-    // Include the CTools tools that we need.
-    ctools_include('ajax');
-    ctools_include('modal');
-
-    // Add CTools' javascript to the page.
-    ctools_modal_add_js();
     $vote_title = t('Vote for "!node"', array('!node' => $node->title));
-    $block->content = ctools_modal_text_button($vote_title, 'sms_vote/' . $node->nid . '/nojs', $vote_title, 'ctools-modal-modal-popup-small');
+    $query = drupal_get_destination();
+    $block->content = sms_vote_l($vote_title, 'sms_vote/' . $node->nid . '/nojs', array('ui' => 'modal', 'query' => $query));
   }
 
   return $block;

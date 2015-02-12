@@ -86,6 +86,23 @@ class SMSVoteTmpSessionAPIStorage extends SMSVoteTmpStorage {
   }
 
   /**
+   * @see SMSVoteTmpStorageInterface::storeProperty()
+   */
+  public function storeProperty($key, $value) {
+    $cache = $this->getSessionData();
+    $cache[$key] = $value;
+    $this->storeSessionData($cache);
+  }
+
+  /**
+   * @see SMSVoteTmpStorageInterface::getProperty()
+   */
+  public function getProperty($key) {
+    $cache = $this->getSessionData();
+    return isset($cache[$key]) ? $cache[$key] : NULL;
+  }
+
+  /**
    * @see SMSVoteTmpStorageInterface::clearStorage()
    */
   public function clearStorage() {

@@ -51,6 +51,12 @@ function sms_vote_admin($form, &$form_state) {
         ),
       ),
     );
+    $form['sms_vote_settings']['activate_ajax'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Activate AJAX'),
+      '#description' => t('If this is checked, the entire voting process will use AJAX for navigation.'),
+      '#default_value' => $sms_vote_settings['activate_ajax'],
+    );
   $form['#tree'] = TRUE;
   return system_settings_form($form);
 }
