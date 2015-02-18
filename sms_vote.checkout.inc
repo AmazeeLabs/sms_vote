@@ -260,7 +260,7 @@ function sms_vote_checkout_form_submit(&$form, &$form_state) {
       drupal_set_message(t('The votes have been saved.'));
       // Clear everything from the temporary storage.
       $storage->clearStorage();
-      $form_state['redirect'] = '<front>';
+      $form_state['redirect'] = 'sms-vote-success';
       $form_state['finished'] = TRUE;
     }
     // @todo: maybe we should raise an exception if the entity could not be
