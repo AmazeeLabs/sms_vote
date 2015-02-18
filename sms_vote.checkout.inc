@@ -92,7 +92,7 @@ function sms_vote_checkout_form($form, &$form_state) {
   $form['phone'] = array(
     '#type' => 'textfield',
     '#title' => t('Phone'),
-    '#description' => t('Please format the phone either like 07xxxxxxxx or using the 10+ digits international format, without any separators between digits and starting with "+" (for example +417xxxxxxxx)') . '<br><br>' . t('Mit der Eingabe deiner Handynummern akzeptierst du die !link.', array('!link' => l(t('Teilnahmebedingungen'), '<front>', array('attributes' => array('target' => '_blank'))))),
+    '#description' => t('Please format the phone either like 07xxxxxxxx or using the 10+ digits international format, without any separators between digits and starting with "+" (for example +417xxxxxxxx)') . '<br><br>' . t('Mit der Eingabe deiner Handynummern akzeptierst du die !link.', array('!link' => l(t('Teilnahmebedingungen'), 'sites/default/files/DGST_Reglement_OnlineTelevoting_Final.pdf', array('attributes' => array('target' => '_blank'))))),
     '#required' => TRUE,
   );
   $storage = SMSVoteTmpStorageFactory::getStorage();
