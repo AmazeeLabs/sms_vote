@@ -46,6 +46,7 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
       ),
     ),
   );
+
   if (empty($step)) {
     $step = 'enter_phone';
   }

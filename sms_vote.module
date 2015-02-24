@@ -15,13 +15,25 @@ function sms_vote_init() {
 }
 
 /**
+ * Helper function to add some js needed for the modal windows.
+ */
+function sms_vote_modal_add_js() {
+  static $added;
+  if (!isset($added)) {
+    $added = TRUE;
+    drupal_add_js(drupal_get_path('module', 'sms_vote') . '/js/sms_vote.modal.js');
+  }
+}
+
+/**
  * Returns the sms vote settings, optional for a specific node type.
  *
  * @param string $type
  *  Optionsl, a node type for which to return the settings.
  */
 function sms_vote_get_settings() {
-  $defaults = array('max_points' => 4, 'code_digits' => 4, 'max_fails' => 3, 'special_number' => '', 'enable_cart' => FALSE, 'force_distribute_all' => FALSE, 'activate_ajax' => TRUE);
+  $defaults = array('max_points' => 4, 'code_digits' => 4, 'max_fails' => 3, 'special_number' => '', 'enable_cart' => FALSE, 'force_distribute_all' => FALSE, 'activate_ajax' => TRUE,
+                    'ajax_settings' => array('show_success_in_modal' => TRUE, 'close_automatically' => TRUE, 'close_automatically_seconds' => 3));
   return variable_get('sms_vote_settings', $defaults);
 }
 
@@ -433,9 +445,22 @@ function sms_vote_widget($nodes) {
 function sms_vote_commands_dismiss_modal_and_show_messages() {
   $commands = array();
   ctools_include('modal');
-  $commands[] = ctools_modal_command_dismiss();
-  $commands[] = ajax_command_remove('div.messages');
-  $commands[] = ajax_command_prepend('body', theme('status_messages'));
+  $sms_vote_settings = sms_vote_get_settings();
+  // If we do not want to show the messages in the modal window, then we just
+  // dismiss the window and prepend the messages to the body.
+  if (empty($sms_vote_settings['ajax_settings']['show_success_in_modal'])) {
+    $commands[] = ctools_modal_command_dismiss();
+    $commands[] = ajax_command_remove('div.messages');
+    $commands[] = ajax_command_prepend('body', theme('status_messages'));
+  }
+  else {
+    $commands[] = ajax_command_html('#modal-content', theme('status_messages'));
+    // Check if we should close the window after some seconds.
+    if (!empty($sms_vote_settings['ajax_settings']['close_automatically'])) {
+      $millisecods = $sms_vote_settings['ajax_settings']['close_automatically_seconds'] * 1000;
+      $commands[] = sms_vote_command_delayed_modal_dismiss($millisecods);
+    }
+  }
   return $commands;
 }
 
@@ -459,6 +484,7 @@ function sms_vote_l($title, $path, $options = array()) {
         if ($options['ui'] == 'modal') {
           ctools_include('modal');
           ctools_modal_add_js();
+          sms_vote_modal_add_js();
           return ctools_modal_text_button($title, $path, $title);
         }
         else {
@@ -469,4 +495,17 @@ function sms_vote_l($title, $path, $options = array()) {
   }
   // By default, return a normal link.
   return l($title, $path, $options);
+}
+
+/**
+ * Returns a command to dismiss a modal window with a delay.
+ *
+ * @param int $delay
+ *   The number of millisecods after which to dismiss the modal window.
+ */
+function sms_vote_command_delayed_modal_dismiss($delay) {
+  return array(
+    'command' => 'delayed_modal_dismiss',
+    'delay' => $delay,
+  );
 }

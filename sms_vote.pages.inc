@@ -34,6 +34,7 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
       ),
     ),
   );
+
   $form_state = array(
     'ajax' => $js,
     'build_info' => array(

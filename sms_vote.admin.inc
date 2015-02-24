@@ -10,53 +10,87 @@
  */
 function sms_vote_admin($form, &$form_state) {
   $sms_vote_settings = sms_vote_get_settings();
-    $form['sms_vote_settings']['max_points'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Maximum points'),
-      '#description' => t('The maximum number of points a user can give for a vote. This is also the exact number of points that an user must distribute (if "Enable voting cart" and "Force distributing all the points" are enabled below) among one or more nodes.'),
-      '#default_value' => $sms_vote_settings['max_points'],
-    );
-    $form['sms_vote_settings']['code_digits'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Code digits number'),
-      '#description' => t('How many digits should the confirmation code have.'),
-      '#default_value' => $sms_vote_settings['code_digits'],
-    );
-    $form['sms_vote_settings']['max_fails'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Maximum fails'),
-      '#description' => t('The maximum number of times the user can input an incorrect code.'),
-      '#default_value' => $sms_vote_settings['max_fails'],
-    );
-    $form['sms_vote_settings']['special_number'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Phone number for predefined codes'),
-      '#description' => t('The special telephone number that can be used with the predefined codes.'),
-      '#default_value' => $sms_vote_settings['special_number'],
-    );
-    $form['sms_vote_settings']['enable_cart'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable voting cart'),
-      '#description' => t('If the cart is enabled, then the user will be able to submit points to more than one node in the same voting session.'),
-      '#default_value' => $sms_vote_settings['enable_cart'],
-    );
-    $form['sms_vote_settings']['force_distribute_all'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Force distributing all the points'),
-      '#description' => t('If this is enabled the user must distribute all the points in the "Maximum points" field, but only when the voting cart is enabled.'),
-      '#default_value' => $sms_vote_settings['force_distribute_all'],
-      '#states' => array(
-        'disabled' => array(
-          ':input[name="sms_vote_settings[enable_cart]"]' => array('checked' => FALSE)
-        ),
+  $form['sms_vote_settings']['max_points'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum points'),
+    '#description' => t('The maximum number of points a user can give for a vote. This is also the exact number of points that an user must distribute (if "Enable voting cart" and "Force distributing all the points" are enabled below) among one or more nodes.'),
+    '#default_value' => $sms_vote_settings['max_points'],
+  );
+  $form['sms_vote_settings']['code_digits'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Code digits number'),
+    '#description' => t('How many digits should the confirmation code have.'),
+    '#default_value' => $sms_vote_settings['code_digits'],
+  );
+  $form['sms_vote_settings']['max_fails'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum fails'),
+    '#description' => t('The maximum number of times the user can input an incorrect code.'),
+    '#default_value' => $sms_vote_settings['max_fails'],
+  );
+  $form['sms_vote_settings']['special_number'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Phone number for predefined codes'),
+    '#description' => t('The special telephone number that can be used with the predefined codes.'),
+    '#default_value' => $sms_vote_settings['special_number'],
+  );
+  $form['sms_vote_settings']['enable_cart'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable voting cart'),
+    '#description' => t('If the cart is enabled, then the user will be able to submit points to more than one node in the same voting session.'),
+    '#default_value' => $sms_vote_settings['enable_cart'],
+  );
+  $form['sms_vote_settings']['force_distribute_all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Force distributing all the points'),
+    '#description' => t('If this is enabled the user must distribute all the points in the "Maximum points" field, but only when the voting cart is enabled.'),
+    '#default_value' => $sms_vote_settings['force_distribute_all'],
+    '#states' => array(
+      'disabled' => array(
+        ':input[name="sms_vote_settings[enable_cart]"]' => array('checked' => FALSE)
       ),
-    );
-    $form['sms_vote_settings']['activate_ajax'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Activate AJAX'),
-      '#description' => t('If this is checked, the entire voting process will use AJAX for navigation.'),
-      '#default_value' => $sms_vote_settings['activate_ajax'],
-    );
+    ),
+  );
+  $form['sms_vote_settings']['activate_ajax'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Activate AJAX'),
+    '#description' => t('If this is checked, the entire voting process will use AJAX for navigation.'),
+    '#default_value' => $sms_vote_settings['activate_ajax'],
+  );
+  $form['sms_vote_settings']['ajax_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Ajax settings'),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="sms_vote_settings[activate_ajax]"]' => array('checked' => TRUE)
+      ),
+    ),
+  );
+  $form['sms_vote_settings']['ajax_settings']['show_success_in_modal'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show the success message in the modal window'),
+    '#default_value' => $sms_vote_settings['ajax_settings']['show_success_in_modal'],
+  );
+  $form['sms_vote_settings']['ajax_settings']['close_automatically'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Close the modal window automatically'),
+    '#default_value' => $sms_vote_settings['ajax_settings']['close_automatically'],
+  );
+  $form['sms_vote_settings']['ajax_settings']['close_automatically_seconds'] = array(
+    '#type' => 'textfield',
+    '#title' => t('After seconds'),
+    '#title_display' => 'invisible',
+    '#field_prefix' => t('after'),
+    '#field_suffix' => t('seconds'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#default_value' => $sms_vote_settings['ajax_settings']['close_automatically_seconds'],
+    '#states' => array(
+      'visible' => array(
+        ':input[name="sms_vote_settings[ajax_settings][close_automatically]"]' => array('checked' => TRUE)
+      ),
+    ),
+  );
   $form['#tree'] = TRUE;
   return system_settings_form($form);
 }
@@ -68,6 +102,12 @@ function sms_vote_admin_validate(&$form, &$form_state) {
   sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['max_points'], t('The maximum number of points has to be numeric and greater than 1.'), $form['sms_vote_settings']['max_points']);
   sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['max_fails'], t('The maximum number of fails has to be numeric and greater than 1.'), $form['sms_vote_settings']['max_fails']);
   sms_vote_admin_check_numeric_and_positive($form_state['values']['sms_vote_settings']['code_digits'], t('The number of digits has to be numeric and greater than 1.'), $form['sms_vote_settings']['code_digits']);
+  if (!empty($form_state['values']['sms_vote_settings']['activate_ajax']) && !empty($form_state['values']['sms_vote_settings']['ajax_settings']['close_automatically'])) {
+    $seconds = $form_state['values']['sms_vote_settings']['ajax_settings']['close_automatically_seconds'];
+    if (!is_numeric($seconds) || $seconds < 0) {
+      form_error($form['sms_vote_settings']['ajax_settings']['close_automatically_seconds'], t('The number of seconds must be numeric and greater or equal to 0.'));
+    }
+  }
 }
 
 /**
