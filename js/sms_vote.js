@@ -13,6 +13,7 @@ Drupal.behaviors.SMSVoteChangePhone = {
     $('#change-phone', context).bind('click', function(e) {
       $('#current-phone').remove();
       $('#phone-wrapper').fadeIn();
+      return false;
     });
   }
 }
