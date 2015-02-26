@@ -46,6 +46,7 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
       ),
     ),
   );
+
   if (empty($step)) {
     $step = 'enter_phone';
   }
@@ -100,6 +101,8 @@ function sms_vote_checkout_form($form, &$form_state) {
   if (!empty($svid)) {
     $form_state['svid'] = $svid;
     $vote_entity = entity_load_single('sms_vote', $form_state['svid']);
+    $form['phone']['#prefix'] = '<div id="current-phone"><span>' . t('Phone: @phone', array('@phone' => $vote_entity->phone)) . '</span> <a id="change-phone" href="#">' . t('change phone') .'</a></div><div id="phone-wrapper" style="display:none">';
+    $form['phone']['#suffix'] = '</div>';
     $form['phone']['#default_value'] = $vote_entity->phone;
     $form['resend'] = array(
       '#type' => 'submit',
