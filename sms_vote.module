@@ -53,7 +53,7 @@ function sms_vote_entity_info() {
   // them with our classes.
   $entities['sms_vote'] = array(
     'label' => t('SMS Vote'),
-    'controller class' => 'EntityAPIController',
+    'controller class' => 'SMSVoteEntityController',
     'base table' => 'sms_vote',
     'access callback' => 'sms_vote_vote_access',
     'entity keys' => array(
@@ -185,6 +185,29 @@ function sms_vote_menu() {
     'page arguments' => array(3,4,5),
     'file' => 'sms_vote.admin.inc',
   );
+  $items['admin/config/system/sms_vote/rounds'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'Voting rounds',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'sms_vote_admin_voting_rounds',
+    'file' => 'sms_vote.admin.inc'
+  );
+  $items['admin/config/system/sms_vote/rounds/%sms_vote_round/edit'] = array(
+    'type' => MENU_VISIBLE_IN_BREADCRUMB,
+    'title' => 'Edit round',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sms_vote_admin_round_add_edit_form', 5),
+    'file' => 'sms_vote.admin.inc'
+  );
+  $items['admin/config/system/sms_vote/rounds/%sms_vote_round/activate'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Activate round',
+    'access arguments' => array('administer sms vote'),
+    'page callback' => 'sms_vote_admin_round_activate_round',
+    'page arguments' => array(5),
+    'file' => 'sms_vote.admin.inc'
+  );
   return $items;
 }
 
@@ -277,6 +300,37 @@ function sms_vote_preprocess_sms_vote_checkout_review(&$vars) {
  */
 function sms_vote_predefined_code_load($cid) {
   return SMSVotePredefinedCodes::loadPredefinedCode($cid);
+}
+
+/**
+ * Loads a voting round by its id.
+ *
+ * @param int $round_id
+ *  The round id.
+ */
+function sms_vote_round_load($round_id) {
+  return db_select('sms_vote_rounds', 'svr')->fields('svr')->condition('svr.svrid', $round_id)->execute()->fetch();
+}
+
+/**
+ * Loads all the rounds.
+ */
+function sms_vote_round_load_all() {
+  return db_select('sms_vote_rounds', 'svr')->fields('svr')->orderBy('svr.svrid')->execute()->fetchAll();
+}
+
+/**
+ * Saves a voting round.
+ *
+ * @param object $voting_round
+ *  An object that maps over the {sms_vote_rounds} table.
+ */
+function sms_vote_round_save($voting_round) {
+  $primary_keys = array();
+  if (!empty($voting_round->svrid)) {
+    $primary_keys[] = 'svrid';
+  }
+  drupal_write_record('sms_vote_rounds', $voting_round, $primary_keys);
 }
 
 /**
