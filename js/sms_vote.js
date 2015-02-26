@@ -8,4 +8,14 @@ Drupal.behaviors.SMSVote = {
   }
 };
 
+Drupal.behaviors.SMSVoteChangePhone = {
+  attach: function(context, settings) {
+    $('#change-phone', context).bind('click', function(e) {
+      $('#current-phone').remove();
+      $('#phone-wrapper').fadeIn();
+      return false;
+    });
+  }
+}
+
 }(jQuery));
