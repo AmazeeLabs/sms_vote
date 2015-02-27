@@ -251,7 +251,7 @@ function sms_vote_sms_vote_points_insert($vote_points_entity) {
   // We register a shutdown function to when calculating the votes to be sure
   // that we also take into consideration the current changes. Otherwise, the
   // total points number will not be calculated using the current points.
-  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
+  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity);
 }
 
 /**
@@ -266,7 +266,7 @@ function sms_vote_sms_vote_points_update($vote_points_entity) {
  * Implements hook_sms_vote_points_delete().
  */
 function sms_vote_sms_vote_points_delete($vote_points_entity) {
-  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity->nid);
+  drupal_register_shutdown_function('sms_vote_update_total_points', $vote_points_entity);
 }
 
 /**
@@ -338,12 +338,18 @@ function sms_vote_round_save($voting_round) {
  *
  * @param int $nid
  *  The node id.
+ *
+ * @param int $round_id
+ *  Optional, the round id.
  */
-function sms_vote_get_total_points_for_nid($nid) {
+function sms_vote_get_total_points_for_nid($nid, $round_id = NULL) {
   $query = db_select('sms_vote_points', 'svp');
   $query->addExpression('SUM(svp.points)', 'total_points');
   $query->innerJoin('sms_vote', 'sv', 'sv.svid = svp.svid');
   $query->condition('svp.nid', $nid)->condition('sv.status', 1);
+  if (!empty($round_id)) {
+    $query->condition('sv.round_id', $round_id);
+  }
   $result = $query->execute()->fetch();
   if (!empty($result->total_points)) {
     return $result->total_points;
@@ -352,19 +358,26 @@ function sms_vote_get_total_points_for_nid($nid) {
 }
 
 /**
- * Updates the total points for a node id.
+ * Updates the total points for a node id and a round. This information we get
+ * from a vote_points entity, which basically stores the reference to the node
+ * and to the vote it belongs to.
  *
  * This is used for example as a shutdown function to refresh the number of
  * points of a node.
  *
  * @param int $nid
  *  The node id.
+ *
+ * @param int $round
+ *  The voting round.
  */
-function sms_vote_update_total_points($nid) {
-  $points = sms_vote_get_total_points_for_nid($nid);
+function sms_vote_update_total_points($vote_points) {
+  $vote_entity = entity_load_single('sms_vote', $vote_points->svid);
+  $points = sms_vote_get_total_points_for_nid($vote_points->nid, $vote_entity->round_id);
+
   // Delete and insert the new value for the vote points.
-  db_delete('sms_vote_total_points')->condition('nid', $nid)->execute();
-  db_insert('sms_vote_total_points')->fields(array('nid' => $nid, 'points' => $points))->execute();
+  db_delete('sms_vote_total_points')->condition('nid', $vote_points->nid)->condition('round_id', $vote_entity->round_id)->execute();
+  db_insert('sms_vote_total_points')->fields(array('nid' => $vote_points->nid, 'points' => $points, 'round_id' => $vote_entity->round_id))->execute();
   // @todo: If we will attach the points on the entity load, then we need to
   // clear the entity cache here.
 }

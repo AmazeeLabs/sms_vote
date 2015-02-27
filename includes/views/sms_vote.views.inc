@@ -333,6 +333,10 @@ function sms_vote_views_data() {
       'left_field' => 'nid',
       'field' => 'nid',
     ),
+    'sms_vote_rounds' => array(
+      'left_field' => 'round_id',
+      'field' => 'svrid',
+    ),
   );
 
   // Node ID table field.
@@ -344,6 +348,18 @@ function sms_vote_views_data() {
       'base field' => 'nid', // The name of the field on the joined table.
       'handler' => 'views_handler_relationship',
       'label' => t('Referenced content'),
+    ),
+  );
+
+  // Round ID table field.
+  $data['sms_vote_total_points']['round_id'] = array(
+    'title' => t('Total Points Voting Round'),
+    'help' => t('The voting round.'),
+    'relationship' => array(
+      'base' => 'sms_vote_rounds', // The name of the table to join with.
+      'base field' => 'svrid', // The name of the field on the joined table.
+      'handler' => 'views_handler_relationship',
+      'label' => t('Total Points Voting Round'),
     ),
   );
 
