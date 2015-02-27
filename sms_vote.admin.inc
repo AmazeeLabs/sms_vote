@@ -232,3 +232,105 @@ function sms_vote_admin_generate_codes_form_submit($form, &$form_state) {
   SMSVotePredefinedCodes::generateAndStoreCodes($form_state['values']['amount']);
   drupal_set_message(t('The codes have been generated.'));
 }
+
+/**
+ * Menu callback for the voting rounds.
+ */
+function sms_vote_admin_voting_rounds() {
+  $rounds = sms_vote_round_load_all();
+  $header = array(t('Round title'), t('Active'), t('Actions'));
+  $rows = array();
+  $active_round = variable_get('sms_vote_active_round', 0);
+  foreach ($rounds as $round) {
+    $row = array();
+    $row[] = check_plain($round->title);
+    $row[] = $round->svrid == $active_round ? t('Yes') : t('No');
+    $actions = array();
+    $actions[] = l(t('edit'), 'admin/config/system/sms_vote/rounds/' . $round->svrid . '/edit', array('query' => drupal_get_destination()));
+    if ($round->svrid != $active_round) {
+      $actions[] = l(t('activate'), 'admin/config/system/sms_vote/rounds/' . $round->svrid . '/activate', array('query' => drupal_get_destination()));
+    }
+    $row[] = implode(' | ', $actions);
+    $rows[] = $row;
+  }
+  return array(
+    'rounds_table' => array(
+      '#theme' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    ),
+    'add_form' => drupal_get_form('sms_vote_admin_round_add_edit_form'),
+  );
+}
+
+/**
+ * Form constructor for the voting round.
+ */
+function sms_vote_admin_round_add_edit_form($form, $form_state, $round = NULL) {
+  $round_form['title'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 128,
+    '#title' => t('Title'),
+    '#required' => TRUE,
+    '#default_value' => !empty($round) ? $round->title : '',
+  );
+  if (!empty($round)) {
+    $round_form['round_id'] = array(
+      '#type' => 'value',
+      '#value' => $round->svrid,
+    );
+  }
+  $round_form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  if (!empty($round)) {
+    $form = $round_form;
+  }
+  else {
+    $form['round_form'] = $round_form;
+    $form['round_form']['#type'] = 'fieldset';
+    $form['round_form']['#title'] = t('Add a voting round');
+    $form['round_form']['#collapsible'] = TRUE;
+    $form['round_form']['#collapsed'] = TRUE;
+  }
+  return $form;
+}
+
+/**
+ * Submit handler for the voting round form.
+ */
+function sms_vote_admin_round_add_edit_form_submit(&$form, &$form_state) {
+  // Load the redirector test if we have one, or create a new one otherwise.
+  $message = t('The round has been saved.');
+  $voting_round = new stdClass();
+  if (!empty($form_state['values']['round_id'])) {
+    $voting_round = sms_vote_round_load($form_state['values']['round_id']);
+    $message = t('The round has been updated.');
+  }
+
+  // Add the new values into the object.
+  $voting_round->title = $form_state['values']['title'];
+
+  // And save it.
+  sms_vote_round_save($voting_round);
+  drupal_set_message($message);
+  $form_state['redirect'] ='admin/config/system/sms_vote/rounds';
+}
+
+/**
+ * Menu callback to activate a voting round.
+ *
+ * @param object $round
+ *  A voting round object. It must contain a svrid value.
+ */
+function sms_vote_admin_round_activate_round($round) {
+  if (!empty($round->svrid)) {
+    variable_set('sms_vote_active_round', $round->svrid);
+    drupal_set_message(t('The voting round %round_title is now active.', array('%round_title' => $round->title)));
+  }
+  else {
+    drupal_set_message(t('The voting round could not be activate because the round id is not valid. Please try again, and if the error persists contact the site administrator.'), 'error');
+  }
+  drupal_goto('admin/config/system/sms_vote/rounds');
+}

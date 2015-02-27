@@ -16,7 +16,7 @@ function sms_vote_views_data() {
   $data['sms_vote']['table']['base'] = array(
     'field' => 'svid',
     'title' => t('SMS Vote'),
-    'help' => t('Am SMS Vote entity'),
+    'help' => t('An SMS Vote entity'),
   );
   $data['sms_vote']['table']['entity type'] = 'sms_vote';
 
@@ -168,13 +168,80 @@ function sms_vote_views_data() {
     ),
   );
 
+  // Vote ID table field.
+  $data['sms_vote']['round_id'] = array(
+    'title' => t('Voting round'),
+    'help' => t('The voting round of this vote.'),
+    'relationship' => array(
+      'base' => 'sms_vote_rounds', // The name of the table to join with.
+      'base field' => 'svrid', // The name of the field on the joined table.
+      'handler' => 'views_handler_relationship',
+      'label' => t('Referenced Voting Round'),
+    ),
+  );
+
+  $data['sms_vote']['table']['join'] = array(
+    'sms_vote_rounds' => array(
+      'left_field' => 'round_id',
+      'field' => 'svrid',
+    ),
+  );
+
+  // The Vote rounds
+  $data['sms_vote_rounds']['table']['group']  = t('SMS Vote Rounds');
+
+  $data['sms_vote_rounds']['table']['base'] = array(
+    'field' => 'svrid',
+    'title' => t('SMS Vote Rounds'),
+    'help' => t('An SMS Vote round'),
+  );
+
+  // The round id.
+  $data['sms_vote_rounds']['svrid'] = array(
+    'title' => t('Round id'),
+    'help' => t('The unique internal identifier of the voting round.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'sms_vote_handler_filter_round',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+  );
+
+  // The round title.
+  $data['sms_vote_rounds']['title'] = array(
+    'title' => t('Round title'),
+    'help' => t('Round title'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+  );
+
+
   // The Vote Points entity.
   $data['sms_vote_points']['table']['group']  = t('SMS Vote Points');
 
   $data['sms_vote_points']['table']['base'] = array(
     'field' => 'svpid',
     'title' => t('SMS Vote Points'),
-    'help' => t('Am SMS Vote Points entity'),
+    'help' => t('An SMS Vote Points entity'),
   );
   $data['sms_vote_points']['table']['entity type'] = 'sms_vote_points';
 
@@ -266,6 +333,10 @@ function sms_vote_views_data() {
       'left_field' => 'nid',
       'field' => 'nid',
     ),
+    'sms_vote_rounds' => array(
+      'left_field' => 'round_id',
+      'field' => 'svrid',
+    ),
   );
 
   // Node ID table field.
@@ -277,6 +348,18 @@ function sms_vote_views_data() {
       'base field' => 'nid', // The name of the field on the joined table.
       'handler' => 'views_handler_relationship',
       'label' => t('Referenced content'),
+    ),
+  );
+
+  // Round ID table field.
+  $data['sms_vote_total_points']['round_id'] = array(
+    'title' => t('Total Points Voting Round'),
+    'help' => t('The voting round.'),
+    'relationship' => array(
+      'base' => 'sms_vote_rounds', // The name of the table to join with.
+      'base field' => 'svrid', // The name of the field on the joined table.
+      'handler' => 'views_handler_relationship',
+      'label' => t('Total Points Voting Round'),
     ),
   );
 

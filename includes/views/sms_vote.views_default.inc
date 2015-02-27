@@ -61,6 +61,10 @@ function sms_vote_views_default_views() {
   $handler->display->display_options['empty']['area']['empty'] = TRUE;
   $handler->display->display_options['empty']['area']['content'] = 'There are no votes yet.';
   $handler->display->display_options['empty']['area']['format'] = 'expert_editor';
+  /* Relationship: SMS Vote: Voting round */
+  $handler->display->display_options['relationships']['round_id']['id'] = 'round_id';
+  $handler->display->display_options['relationships']['round_id']['table'] = 'sms_vote';
+  $handler->display->display_options['relationships']['round_id']['field'] = 'round_id';
   /* Field: Bulk operations: SMS Vote */
   $handler->display->display_options['fields']['views_bulk_operations']['id'] = 'views_bulk_operations';
   $handler->display->display_options['fields']['views_bulk_operations']['table'] = 'sms_vote';
@@ -133,6 +137,13 @@ function sms_vote_views_default_views() {
   $handler->display->display_options['fields']['status']['type_custom_true'] = 'Active';
   $handler->display->display_options['fields']['status']['type_custom_false'] = 'Pending';
   $handler->display->display_options['fields']['status']['not'] = 0;
+  /* Field: SMS Vote Rounds: Round title */
+  $handler->display->display_options['fields']['title']['id'] = 'title';
+  $handler->display->display_options['fields']['title']['table'] = 'sms_vote_rounds';
+  $handler->display->display_options['fields']['title']['field'] = 'title';
+  $handler->display->display_options['fields']['title']['relationship'] = 'round_id';
+  $handler->display->display_options['fields']['title']['label'] = 'Round';
+  $handler->display->display_options['fields']['title']['element_label_colon'] = FALSE;
   /* Filter criterion: SMS Vote: Phone */
   $handler->display->display_options['filters']['phone']['id'] = 'phone';
   $handler->display->display_options['filters']['phone']['table'] = 'sms_vote';
@@ -149,6 +160,24 @@ function sms_vote_views_default_views() {
     4 => 0,
     5 => 0,
     3 => 0,
+  );
+  /* Filter criterion: SMS Vote Rounds: Round id */
+  $handler->display->display_options['filters']['svrid']['id'] = 'svrid';
+  $handler->display->display_options['filters']['svrid']['table'] = 'sms_vote_rounds';
+  $handler->display->display_options['filters']['svrid']['field'] = 'svrid';
+  $handler->display->display_options['filters']['svrid']['relationship'] = 'round_id';
+  $handler->display->display_options['filters']['svrid']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['svrid']['expose']['operator_id'] = 'svrid_op';
+  $handler->display->display_options['filters']['svrid']['expose']['label'] = 'Round';
+  $handler->display->display_options['filters']['svrid']['expose']['operator'] = 'svrid_op';
+  $handler->display->display_options['filters']['svrid']['expose']['identifier'] = 'svrid';
+  $handler->display->display_options['filters']['svrid']['expose']['remember_roles'] = array(
+    2 => '2',
+    1 => 0,
+    3 => 0,
+    5 => 0,
+    6 => 0,
+    7 => 0,
   );
 
   /* Display: Page */
@@ -176,11 +205,14 @@ function sms_vote_views_default_views() {
     t('next Ý'),
     t('last È'),
     t('There are no votes yet.'),
+    t('Referenced Voting Round'),
     t('SMS Vote'),
+    t('- Choose an operation -'),
     t('Phone'),
     t('Vote status'),
     t('Active'),
     t('Pending'),
+    t('Round'),
     t('Page'),
   );
 
