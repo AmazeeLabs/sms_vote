@@ -301,7 +301,7 @@ function sms_vote_admin_round_add_edit_form($form, $form_state, $round = NULL) {
  * Submit handler for the voting round form.
  */
 function sms_vote_admin_round_add_edit_form_submit(&$form, &$form_state) {
-  // Load the redirector test if we have one, or create a new one otherwise.
+  // Load the voting round if we have one, or create a new one otherwise.
   $message = t('The round has been saved.');
   $voting_round = new stdClass();
   if (!empty($form_state['values']['round_id'])) {
@@ -330,7 +330,7 @@ function sms_vote_admin_round_activate_round($round) {
     drupal_set_message(t('The voting round %round_title is now active.', array('%round_title' => $round->title)));
   }
   else {
-    drupal_set_message(t('The voting round could not be activate because the round id is not valid. Please try again, and if the error persists contact the site administrator.'), 'error');
+    drupal_set_message(t('The voting round could not be activated because the round id is not valid. Please try again, and if the error persists contact the site administrator.'), 'error');
   }
   drupal_goto('admin/config/system/sms_vote/rounds');
 }
