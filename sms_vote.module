@@ -105,6 +105,10 @@ function sms_vote_permission() {
       'title' => t('Administer SMS Vote'),
       'restrict access' => TRUE,
     ),
+    'administer voting rounds' => array(
+      'title' => t('Administer voting rounds'),
+      'restrict access' => TRUE,
+    ),
 
     // This is used for the moment only in the vote
     'delete votes' => array(
@@ -188,14 +192,14 @@ function sms_vote_menu() {
   $items['admin/config/system/sms_vote/rounds'] = array(
     'type' => MENU_LOCAL_TASK,
     'title' => 'Voting rounds',
-    'access arguments' => array('administer sms vote'),
+    'access arguments' => array('administer voting rounds'),
     'page callback' => 'sms_vote_admin_voting_rounds',
     'file' => 'sms_vote.admin.inc'
   );
   $items['admin/config/system/sms_vote/rounds/%sms_vote_round/edit'] = array(
     'type' => MENU_VISIBLE_IN_BREADCRUMB,
     'title' => 'Edit round',
-    'access arguments' => array('administer sms vote'),
+    'access arguments' => array('administer voting rounds'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sms_vote_admin_round_add_edit_form', 5),
     'file' => 'sms_vote.admin.inc'
@@ -203,7 +207,7 @@ function sms_vote_menu() {
   $items['admin/config/system/sms_vote/rounds/%sms_vote_round/activate'] = array(
     'type' => MENU_CALLBACK,
     'title' => 'Activate round',
-    'access arguments' => array('administer sms vote'),
+    'access arguments' => array('administer voting rounds'),
     'page callback' => 'sms_vote_admin_round_activate_round',
     'page arguments' => array(5),
     'file' => 'sms_vote.admin.inc'
