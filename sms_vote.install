@@ -63,11 +63,44 @@ function sms_vote_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'round_id' => array(
+        'description' => 'The id of the voting round',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('svid'),
+    'foreign keys' => array(
+      'sms_vote_round' => array(
+        'table' => 'sms_vote_rounds',
+        'columns' => array('round_id' => 'svrid'),
+      ),
+    ),
     'indexes' => array(
       'phone' => array('phone'),
+      'round' => array('round_id'),
+      'round_phone' => array('round_id', 'phone'),
     ),
+  );
+  $schema['sms_vote_rounds'] = array(
+    'description' => 'The base table for vote rounds.',
+    'fields' => array(
+      'svrid' => array(
+        'description' => 'The primary identifier for the round.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'The title of the round.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('svrid'),
   );
   $schema['sms_vote_points'] = array(
     'description' => 'The base table for vote points entities.',
@@ -143,12 +176,22 @@ function sms_vote_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'round_id' => array(
+        'description' => 'The id of the voting round',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
-    'primary key' => array('nid'),
+    'primary key' => array('nid', 'round_id'),
     'foreign keys' => array(
       'sms_vote_node' => array(
         'table' => 'node',
         'columns' => array('nid' => 'nid'),
+      ),
+      'sms_vote_round' => array(
+        'table' => 'sms_vote_rounds',
+        'columns' => array('round_id' => 'svrid'),
       ),
     ),
   );
@@ -178,4 +221,44 @@ function sms_vote_schema() {
     'primary key' => array('cid'),
   );
   return $schema;
+}
+
+/**
+ * Adds the voting round support.
+ */
+function sms_vote_update_7001() {
+  // Create the sms_vote_rounds table.
+  $schema = sms_vote_schema();
+  if (!db_table_exists('sms_vote_rounds')) {
+    db_create_table('sms_vote_rounds', $schema['sms_vote_rounds']);
+  }
+
+  if (!db_field_exists('sms_vote', 'round_id')) {
+    db_add_field('sms_vote', 'round_id', $schema['sms_vote']['fields']['round_id']);
+  }
+
+  // Add the additional indexes on the sms_vote table.
+  if (!db_index_exists('sms_vote', 'round')) {
+    db_add_index('sms_vote', 'round', $schema['sms_vote']['indexes']['round']);
+  }
+  if (!db_index_exists('sms_vote', 'round_phone')) {
+    db_add_index('sms_vote', 'round_phone', $schema['sms_vote']['indexes']['round_phone']);
+  }
+
+  // Create also a default round.
+  $round_id = db_insert('sms_vote_rounds')->fields(array('title' => 'Default'))->execute();
+  // Update all the votes to be in the default round.
+  db_update('sms_vote')->fields(array('round_id' => $round_id))->execute();
+
+  // Add the round id field to the sms_vote_total_points also.
+  if (!db_field_exists('sms_vote_total_points', 'round_id')) {
+    db_add_field('sms_vote_total_points', 'round_id', $schema['sms_vote_total_points']['fields']['round_id']);
+  }
+  // Change the primary key of the sms_vote_total_points. Now we also have a
+  // round.
+  db_drop_primary_key('sms_vote_total_points');
+  db_add_primary_key('sms_vote_total_points', $schema['sms_vote_total_points']['primary key']);
+  db_update('sms_vote_total_points')->fields(array('round_id' => $round_id))->execute();
+  // And set the active round.
+  variable_set('sms_vote_active_round', $round_id);
 }

@@ -151,9 +151,14 @@ function sms_vote_checkout_form_validate(&$form, &$form_state) {
 
   // Check if the user tried to enter a wrong code too many times.
   $svid = 0;
-  if (!empty($form_state['svid']) && $form_state['values']['op'] != $form_state['values']['resend']) {
+  $vote_entity = NULL;
+  $vote_round = variable_get('sms_vote_active_round', 0);
+  if (!empty($form_state['svid'])) {
     $svid = $form_state['svid'];
     $vote_entity = entity_load_single('sms_vote', $svid);
+    $vote_round = $vote_entity->round_id;
+  }
+  if (!empty($svid) && $form_state['values']['op'] != $form_state['values']['resend']) {
     $max_validation_fails = $sms_vote_settings['max_fails'];
     // If the user exceded the maximum number of failures, stop here.
     if ($vote_entity->validation_fails >= $max_validation_fails) {
@@ -173,19 +178,21 @@ function sms_vote_checkout_form_validate(&$form, &$form_state) {
     // We validate the phone to be unique only if it is not a special one,
     // because that one can be used multiple times.
     if (!sms_vote_is_special_number_phone($phone)) {
+
       $query = db_select('sms_vote', 'sv')->fields('sv', array('svid', 'phone', 'status'));
-      $query->condition('sv.phone', $phone)->condition('sv.svid', $svid, '<>')->condition('sv.status', '1');
+      // We search for a phone with the same value (but from a different vote
+      // than the current one, if we have an $svid) which has the status set
+      // to 1 and is from the same round. If we find such a phone, then it means
+      // we have a duplicate!.
+      $query->condition('sv.phone', $phone)->condition('sv.svid', $svid, '<>')->condition('sv.status', '1')->condition('sv.round_id', $vote_round);
       $result = $query->execute()->fetch();
       if (!empty($result)) {
         form_set_error('phone', t('This phone number was already used for voting.'));
-        // @todo: we need to handle the case when the user wants to resend the code
-        // here.
       }
     }
     // If we have an svid, we must check the code, but only if we do not resend
     // the code.
     if (!empty($svid) && $form_state['values']['op'] != $form_state['values']['resend']) {
-      $vote_entity = entity_load_single('sms_vote', $svid);
       $valid_codes = sms_vote_get_valid_codes_for_vote($vote_entity);
       if (empty($valid_codes) || !in_array($form_state['values']['code'], $valid_codes)) {
         form_set_error('code', t('The code you entered is incorrect.'));
