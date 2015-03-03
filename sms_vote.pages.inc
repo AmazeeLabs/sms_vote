@@ -66,21 +66,22 @@ function sms_vote_vote_page($node, $js = NULL, $step = NULL) {
     ctools_include('modal');
     ctools_include('ajax');
     $commands = array();
-    if (!empty($form_state['dismiss_and_update_cart'])) {
-      $commands += sms_vote_commands_dismiss_modal_and_show_messages();
+    if (!empty($form_state['cancel'])) {
+      $commands[] = ctools_modal_command_dismiss();
+    }
+    elseif (!empty($form_state['dismiss_and_update_cart'])) {
+      $commands[] = ctools_modal_command_dismiss();
       module_load_include('inc', 'sms_vote', 'sms_vote.cart');
       $cart_form = drupal_get_form('sms_vote_voting_cart');
       $commands[] = ajax_command_html('.sms-cart-form-wrapper', drupal_render($cart_form));
     }
-    elseif (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+    elseif (!empty($form_state['complete'])) {
       // Dismiss the modal and show the messages on the site.
       $commands += sms_vote_commands_dismiss_modal_and_show_messages();
       // Even that we should not have this case happening, because if we reach to
       // the complete state in this wizard this means we do not use a cart, we
       // still remove any cart contents (which is in the .voting block).
-      if (!empty($form_state['complete'])) {
-        $commands[] = ajax_command_remove('.voting-block');
-      }
+      $commands[] = ajax_command_remove('.voting-block');
     }
     else {
       $output = drupal_render($form);

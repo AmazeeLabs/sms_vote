@@ -68,12 +68,13 @@ function sms_vote_checkout_page($js = NULL, $step = NULL) {
     ctools_include('ajax');
     // If we cancel or complete the process, we just dismiss the modal and show
     // the messages.
-    if (!empty($form_state['cancel']) || !empty($form_state['complete'])) {
+    if (!empty($form_state['cancel'])) {
+      $commands[] = ctools_modal_command_dismiss();
+    }
+    elseif (!empty($form_state['complete'])) {
       // Dismiss the modal and show the messages on the site.
       $commands = sms_vote_commands_dismiss_modal_and_show_messages();
-      if (!empty($form_state['complete'])) {
-        $commands[] = ajax_command_remove('.voting-block');
-      }
+      $commands[] = ajax_command_remove('.voting-block');
     }
     else {
       // Otherwise, we just render the form.
