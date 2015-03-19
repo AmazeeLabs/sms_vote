@@ -125,6 +125,11 @@ function sms_vote_checkout_form($form, &$form_state) {
   else {
     $form['buttons']['next']['#value'] = t('Send SMS');
   }
+  $form['buttons']['explanation'] = array(
+    '#type' => 'item',
+    '#markup' => t('By pressing the "Send SMS" button, an SMS will be sent to you with a code that you have to input afterwards for validation.'),
+    '#weight' => 50,
+  );
   // If we have the cart enabled, then we show a review of the votes.
   if (sms_vote_is_cart_enabled()) {
     $form['#prefix'] = theme('sms_vote_checkout_review');
