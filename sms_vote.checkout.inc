@@ -175,9 +175,25 @@ function sms_vote_checkout_form_validate(&$form, &$form_state) {
 
   // We work only with normalized phone numbers. We always use the international
   // 10+ digits version of the phone number.
+  $error_message = '';
   $phone = sms_vote_normalize_phone($form_state['values']['phone']);
   if (empty($phone)) {
-    form_set_error('phone', t('The phone number is not valid.'));
+    $error_message = t('The phone number is not valid.');
+  }
+
+  // Hotfix: make sure that the phone is a swiss number.
+  // It must start with +4175 till +4179.
+  // We could use a regular expression here, but becaue we need a quick fix that
+  // we make sure it is working we implement it in an 'old' way.
+  if (!empty($phone) && !sms_vote_is_special_number_phone($phone)) {
+    $start_string = substr($phone, 0, 5);
+    if (!in_array($start_string, array('+4175', '+4176', '+4177', '+4178', '+4179'))) {
+      $error_message = t('The phone number is not a valid swiss number.');
+    }
+  }
+
+  if (!empty($error_message)) {
+    form_set_error('phone', $error_message);
   }
   else {
     form_set_value($form['phone'], $phone, $form_state);
